@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Resume;
 use App\Services\JsonSchemaValidator;
+use App\Services\ResumeFilterService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -46,7 +47,7 @@ class ResumeController extends Controller
                 'json-resume-merged.json',
                 autoFetchSchema: true
             );
-  
+
             if (!$validation['valid']) {
                 // 🔹 SAFEGUARD: Ensure errors are strings before imploding
                 $errorMessages = array_filter(
@@ -104,16 +105,38 @@ class ResumeController extends Controller
     }
 
     /**
-     * Display uploaded resume
+     * Display uploaded resume with optional keyword filtering.
      */
-    public function show(Resume $resume)
+    public function show(Resume $resume, Request $request)
     {
         // Authorize: user can only view their own resumes
         if ($resume->user_id !== Auth::id()) {
             abort(403);
         }
 
-        return view('resumes.show', compact('resume'));
+        // 🔹 KEYWORD FILTERING 🔹
+        $keywords = $request->query('keywords'); // ?keywords=php,laravel or ?keywords[]=php&keywords[]=laravel
+        $matchAll = $request->boolean('match_all', false); // ?match_all=true for AND logic
+
+        $originalData = $resume->parsed_data;
+
+        if (!empty($keywords)) {
+            $filteredData = ResumeFilterService::filter($originalData, $keywords, $matchAll);
+            $filterMetadata = ResumeFilterService::getFilterMetadata($originalData, $filteredData);
+        } else {
+            $filteredData = $originalData;
+            $filterMetadata = null;
+        }
+
+        // Pass to view
+        return view('resumes.show', [
+            'resume' => $resume,
+            'parsed_data' => $filteredData,        // Filtered data for display
+            'original_data' => $originalData,      // Original for reference/debug
+            'filter_keywords' => $keywords,        // For UI to show active filters
+            'filter_metadata' => $filterMetadata,  // For filter stats display
+            'filter_match_all' => $matchAll,       // For UI toggle state
+        ]);
     }
 
     /**
@@ -178,6 +201,14 @@ class ResumeController extends Controller
                 'resume_file' => 'Resume must include at least one work experience or education entry.'
             ]);
         }
+    }
+
+    /**
+     * Check if a section has items to display.
+     */
+    protected function hasSection(array $data, string $section): bool
+    {
+        return isset($data[$section]) && is_array($data[$section]) && !empty($data[$section]);
     }
 
 }
