@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0889f754fef5f942db819d715b6acc0f",
+    "content-hash": "6ea5c91132667a924b041d609e1ec015",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -6236,6 +6236,48 @@
             "time": "2026-02-15T10:53:20+00:00"
         },
         {
+            "name": "techsemicolon/laravel-php-latex",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/baradhili/laravel-php-latex.git",
+                "reference": "a52dc858e358a893d901eb017f189c9b38106af5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/baradhili/laravel-php-latex/zipball/a52dc858e358a893d901eb017f189c9b38106af5",
+                "reference": "a52dc858e358a893d901eb017f189c9b38106af5",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/filesystem": "^7.0 || ^8.0 || ^9.0 || ^10.0 || ^11.0 || ^12.0 || ^13.0",
+                "illuminate/support": "^7.0 || ^8.0 || ^9.0 || ^10.0 || ^11.0 || ^12.0 || ^13.0",
+                "php": "^7.4 || ^8.0 || ^8.3",
+                "symfony/process": "^5.0 || ^6.0 || ^7.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Techsemicolon\\": "src/Techsemicolon"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Mihir Bhende",
+                    "email": "techsemicolon@gmail.com"
+                }
+            ],
+            "description": "A latex package for laravel to generate pdfs",
+            "support": {
+                "source": "https://github.com/baradhili/laravel-php-latex/tree/master"
+            },
+            "time": "2026-03-25T08:33:16+00:00"
+        },
+        {
             "name": "tijsverkoyen/css-to-inline-styles",
             "version": "v2.4.0",
             "source": {
@@ -8593,8 +8635,10 @@
         }
     ],
     "aliases": [],
-    "minimum-stability": "stable",
-    "stability-flags": [],
+    "minimum-stability": "dev",
+    "stability-flags": {
+        "techsemicolon/laravel-php-latex": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
