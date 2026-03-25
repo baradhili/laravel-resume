@@ -23,6 +23,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/resumes', [ResumeController::class, 'index'])->name('resumes.index');
     Route::get('/resumes/{resume}', [ResumeController::class, 'show'])->name('resumes.show');
     Route::delete('/resumes/{resume}', [ResumeController::class, 'destroy'])->name('resumes.destroy');
+    Route::get('/resumes/{resume}/download/json', [ResumeController::class, 'downloadJSON']) ->name('resumes.json');
+    Route::get('/resumes/{resume}/download/pdf', [ResumeController::class, 'downloadPDF']) ->name('resumes.pdf');
 
 });
 
