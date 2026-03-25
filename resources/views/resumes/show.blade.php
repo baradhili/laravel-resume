@@ -82,7 +82,7 @@
                 </a>
 
                 <!-- 🔹 Download Filtered JSON Button 🔹 -->
-                <a href="{{ route('resumes.download', $resume) }}{{ !empty($filter_keywords) ? '?' . http_build_query(array_filter(['keywords' => $filter_keywords, 'match_all' => $filter_match_all ?? null])) : '' }}"
+                <a href="{{ route('resumes.json', $resume) }}{{ !empty($filter_keywords) ? '?' . http_build_query(array_filter(['keywords' => $filter_keywords, 'match_all' => $filter_match_all ?? null])) : '' }}"
                     class="download-btn {{ !empty($filter_keywords) ? 'filtered' : '' }}"
                     title="Download {{ !empty($filter_keywords) ? 'filtered ' : '' }}resume as JSON">
                     <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,7 +203,7 @@
                                 @endif
                                 @if (!empty($basics['location']))
                                     <span>📍
-                                        {{ $basics['location']['city'] ?? '' }}{{ $basics['location']['countryCode'] ? ', ' . $basics['location']['countryCode'] : '' }}</span>
+                                        {{ $basics['location']['city'] ?? '' }}{{ !empty($basics['location']['countryCode']) ? ', ' . $basics['location']['countryCode'] : '' }}</span>
                                 @endif
                             </div>
                         @endif

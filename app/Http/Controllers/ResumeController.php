@@ -215,7 +215,7 @@ class ResumeController extends Controller
     /**
      * Download filtered resume as JSON file.
      */
-    public function download(Resume $resume, Request $request): StreamedResponse
+    public function downloadJSON(Resume $resume, Request $request): StreamedResponse
     {
         // Authorize: user can only download their own resumes
         if ($resume->user_id !== Auth::id()) {
@@ -248,7 +248,8 @@ class ResumeController extends Controller
 
         // Generate filename
         $safeName = preg_replace('/[^a-z0-9]+/i', '-', strtolower($resume->name ?: 'resume'));
-        $filename = $safeName . '-filtered-' . now()->format('Y-m-d') . '.json';
+        $suffix = !empty($keywords) ? '-filtered' : '';
+        $filename = $safeName . $suffix . '-' . now()->format('Y-m-d') . '.json';
 
         // Return streamed JSON response
         return response()->streamDownload(
