@@ -23,6 +23,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/resumes', [ResumeController::class, 'index'])->name('resumes.index');
     Route::get('/resumes/{resume}', [ResumeController::class, 'show'])->name('resumes.show');
     Route::delete('/resumes/{resume}', [ResumeController::class, 'destroy'])->name('resumes.destroy');
+    Route::get('/resumes/{resume}/download', [ResumeController::class, 'download']) ->name('resumes.download');
 
 });
 

@@ -4,19 +4,69 @@
 
 @push('styles')
     <style>
-        .resume-section { @apply mb-6; }
-        .resume-section-title { @apply text-lg font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200; }
-        .resume-item { @apply mb-4 pl-4 border-l-2 border-gray-200; }
-        .resume-item-header { @apply font-medium text-gray-900; }
-        .resume-item-meta { @apply text-sm text-gray-500 mb-1; }
-        .resume-item-body { @apply text-gray-700; }
-        .tag { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mr-2 mb-2; }
-        .project-ref { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 mr-2 mb-1 hover:bg-gray-200 transition; }
-        .project-ref-linked { @apply bg-indigo-50 text-indigo-700 hover:bg-indigo-100; }
-        .project-ref-external { @apply bg-amber-50 text-amber-700 hover:bg-amber-100; }
-        .cert-badge { @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mr-2 mb-1; }
-        .award-meta { @apply text-xs text-gray-500; }
-        .pub-meta { @apply text-xs text-gray-500 italic; }
+        .download-btn {
+            @apply inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition;
+        }
+
+        .download-btn.filtered {
+            @apply border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100;
+        }
+
+        .filter-badge {
+            @apply ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-700;
+        }
+
+        .resume-section {
+            @apply mb-6;
+        }
+
+        .resume-section-title {
+            @apply text-lg font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200;
+        }
+
+        .resume-item {
+            @apply mb-4 pl-4 border-l-2 border-gray-200;
+        }
+
+        .resume-item-header {
+            @apply font-medium text-gray-900;
+        }
+
+        .resume-item-meta {
+            @apply text-sm text-gray-500 mb-1;
+        }
+
+        .resume-item-body {
+            @apply text-gray-700;
+        }
+
+        .tag {
+            @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mr-2 mb-2;
+        }
+
+        .project-ref {
+            @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 mr-2 mb-1 hover:bg-gray-200 transition;
+        }
+
+        .project-ref-linked {
+            @apply bg-indigo-50 text-indigo-700 hover:bg-indigo-100;
+        }
+
+        .project-ref-external {
+            @apply bg-amber-50 text-amber-700 hover:bg-amber-100;
+        }
+
+        .cert-badge {
+            @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mr-2 mb-1;
+        }
+
+        .award-meta {
+            @apply text-xs text-gray-500;
+        }
+
+        .pub-meta {
+            @apply text-xs text-gray-500 italic;
+        }
     </style>
 @endpush
 
@@ -30,6 +80,22 @@
                     class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
                     ← Back to Resumes
                 </a>
+
+                <!-- 🔹 Download Filtered JSON Button 🔹 -->
+                <a href="{{ route('resumes.download', $resume) }}{{ !empty($filter_keywords) ? '?' . http_build_query(array_filter(['keywords' => $filter_keywords, 'match_all' => $filter_match_all ?? null])) : '' }}"
+                    class="download-btn {{ !empty($filter_keywords) ? 'filtered' : '' }}"
+                    title="Download {{ !empty($filter_keywords) ? 'filtered ' : '' }}resume as JSON">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download JSON
+                    @if (!empty($filter_keywords))
+                        <span
+                            class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-700">filtered</span>
+                    @endif
+                </a>
+
                 <div class="space-x-3">
                     <a href="{{ route('resumes.upload') }}"
                         class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
@@ -78,14 +144,14 @@
                     <div class="flex-1 min-w-[200px]">
                         <label for="keywords" class="sr-only">Filter by keywords</label>
                         <input type="text" name="keywords" id="keywords"
-                            value="{{ is_array($filter_keywords ?? []) ? implode(',', $filter_keywords ?? []) : ($filter_keywords ?? '') }}"
+                            value="{{ is_array($filter_keywords ?? []) ? implode(',', $filter_keywords ?? []) : $filter_keywords ?? '' }}"
                             placeholder="Filter: php, laravel, api..."
                             class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
 
                     <div class="flex items-center gap-2">
                         <input type="checkbox" name="match_all" id="match_all" value="1"
-                            {{ ($filter_match_all ?? false) ? 'checked' : '' }}
+                            {{ $filter_match_all ?? false ? 'checked' : '' }}
                             class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
                         <label for="match_all" class="text-sm text-gray-700">Match ALL</label>
                     </div>
@@ -106,9 +172,12 @@
                 <!-- Filter Stats -->
                 @if (!empty($filter_metadata))
                     <div class="mt-2 text-xs text-gray-500 flex flex-wrap gap-4">
-                        <span>Work: {{ $filter_metadata['filtered_counts']['work'] ?? 0 }}/{{ $filter_metadata['original_counts']['work'] ?? 0 }}</span>
-                        <span>Skills: {{ $filter_metadata['filtered_counts']['skills'] ?? 0 }}/{{ $filter_metadata['original_counts']['skills'] ?? 0 }}</span>
-                        <span>Education: {{ $filter_metadata['filtered_counts']['education'] ?? 0 }}/{{ $filter_metadata['original_counts']['education'] ?? 0 }}</span>
+                        <span>Work:
+                            {{ $filter_metadata['filtered_counts']['work'] ?? 0 }}/{{ $filter_metadata['original_counts']['work'] ?? 0 }}</span>
+                        <span>Skills:
+                            {{ $filter_metadata['filtered_counts']['skills'] ?? 0 }}/{{ $filter_metadata['original_counts']['skills'] ?? 0 }}</span>
+                        <span>Education:
+                            {{ $filter_metadata['filtered_counts']['education'] ?? 0 }}/{{ $filter_metadata['original_counts']['education'] ?? 0 }}</span>
                     </div>
                 @endif
             </div>
@@ -126,13 +195,15 @@
                         @if (!empty($basics['email']) || !empty($basics['phone']))
                             <div class="flex flex-wrap gap-4 text-sm text-gray-600">
                                 @if (!empty($basics['email']))
-                                    <a href="mailto:{{ $basics['email'] }}" class="hover:text-indigo-600">📧 {{ $basics['email'] }}</a>
+                                    <a href="mailto:{{ $basics['email'] }}" class="hover:text-indigo-600">📧
+                                        {{ $basics['email'] }}</a>
                                 @endif
                                 @if (!empty($basics['phone']))
                                     <span>📱 {{ $basics['phone'] }}</span>
                                 @endif
                                 @if (!empty($basics['location']))
-                                    <span>📍 {{ $basics['location']['city'] ?? '' }}{{ $basics['location']['countryCode'] ? ', ' . $basics['location']['countryCode'] : '' }}</span>
+                                    <span>📍
+                                        {{ $basics['location']['city'] ?? '' }}{{ $basics['location']['countryCode'] ? ', ' . $basics['location']['countryCode'] : '' }}</span>
                                 @endif
                             </div>
                         @endif
@@ -146,9 +217,9 @@
                             <div class="mt-3 flex flex-wrap gap-3">
                                 @foreach ($basics['profiles'] as $profile)
                                     @if (!empty($profile['url']))
-                                        <a href="{{ $profile['url'] }}" target="_blank" 
-                                           class="text-sm text-indigo-600 hover:underline">
-                                            {{ $profile['network'] ?? $profile['username'] ?? 'Profile' }}
+                                        <a href="{{ $profile['url'] }}" target="_blank"
+                                            class="text-sm text-indigo-600 hover:underline">
+                                            {{ $profile['network'] ?? ($profile['username'] ?? 'Profile') }}
                                         </a>
                                     @endif
                                 @endforeach
@@ -182,8 +253,12 @@
                                 $projectMap = [];
                                 $projects = $parsed_data['projects'] ?? [];
                                 foreach ($projects as $proj) {
-                                    if (!empty($proj['id'])) $projectMap[$proj['id']] = $proj;
-                                    if (!empty($proj['name'])) $projectMap[$proj['name']] = $proj;
+                                    if (!empty($proj['id'])) {
+                                        $projectMap[$proj['id']] = $proj;
+                                    }
+                                    if (!empty($proj['name'])) {
+                                        $projectMap[$proj['name']] = $proj;
+                                    }
                                 }
                             @endphp
 
@@ -191,12 +266,16 @@
                                 <div class="resume-item">
                                     <div class="resume-item-header">{{ $job['position'] ?? 'Unknown Position' }}</div>
                                     <div class="resume-item-meta">
-                                        {{ $job['name'] ?? $job['employer'] ?? 'Company' }}
+                                        {{ $job['name'] ?? ($job['employer'] ?? 'Company') }}
                                         @if (!empty($job['location']))
                                             • {{ $job['location'] }}
                                         @endif
                                         @if (!empty($job['startDate']))
-                                            • {{ $job['startDate'] }} @if (!empty($job['endDate'])) - {{ $job['endDate'] }} @else - Present @endif
+                                            • {{ $job['startDate'] }} @if (!empty($job['endDate']))
+                                                - {{ $job['endDate'] }}
+                                            @else
+                                                - Present
+                                            @endif
                                         @endif
                                     </div>
                                     @if (!empty($job['summary']))
@@ -213,7 +292,8 @@
                                     <!-- Cross-Referenced Projects -->
                                     @if (!empty($job['crossReferencedProjects']) && is_array($job['crossReferencedProjects']))
                                         <div class="mt-2">
-                                            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Related Projects:</span>
+                                            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Related
+                                                Projects:</span>
                                             <div class="mt-1 flex flex-wrap">
                                                 @foreach ($job['crossReferencedProjects'] as $ref)
                                                     @php
@@ -223,12 +303,13 @@
                                                         $isFound = $project !== null;
                                                     @endphp
                                                     @if ($projectUrl)
-                                                        <a href="{{ $projectUrl }}" target="_blank" 
-                                                           class="project-ref {{ $isFound ? 'project-ref-linked' : 'project-ref-external' }}">
+                                                        <a href="{{ $projectUrl }}" target="_blank"
+                                                            class="project-ref {{ $isFound ? 'project-ref-linked' : 'project-ref-external' }}">
                                                             🔗 {{ $displayName }}
                                                         </a>
                                                     @else
-                                                        <span class="project-ref {{ $isFound ? 'project-ref-linked' : 'project-ref-external' }}">
+                                                        <span
+                                                            class="project-ref {{ $isFound ? 'project-ref-linked' : 'project-ref-external' }}">
                                                             {{ $displayName }}
                                                         </span>
                                                     @endif
@@ -249,12 +330,16 @@
                                 <div class="resume-item">
                                     <div class="resume-item-header">
                                         {{ $edu['studyType'] ?? '' }}
-                                        @if (!empty($edu['area'])) in {{ $edu['area'] }} @endif
+                                        @if (!empty($edu['area']))
+                                            in {{ $edu['area'] }}
+                                        @endif
                                     </div>
                                     <div class="resume-item-meta">
                                         {{ $edu['institution'] ?? 'Institution' }}
                                         @if (!empty($edu['startDate']))
-                                            • {{ $edu['startDate'] }} @if (!empty($edu['endDate'])) - {{ $edu['endDate'] }} @endif
+                                            • {{ $edu['startDate'] }} @if (!empty($edu['endDate']))
+                                                - {{ $edu['endDate'] }}
+                                            @endif
                                         @endif
                                     </div>
                                     @if (!empty($edu['score']))
@@ -278,12 +363,19 @@
                             <h2 class="resume-section-title">Volunteer Experience</h2>
                             @foreach ($parsed_data['volunteer'] as $item)
                                 <div class="resume-item">
-                                    <div class="resume-item-header">{{ $item['position'] ?? $item['role'] ?? 'Volunteer' }}</div>
+                                    <div class="resume-item-header">{{ $item['position'] ?? ($item['role'] ?? 'Volunteer') }}
+                                    </div>
                                     <div class="resume-item-meta">
                                         {{ $item['organization'] ?? '' }}
-                                        @if (!empty($item['location'])) • {{ $item['location'] }} @endif
+                                        @if (!empty($item['location']))
+                                            • {{ $item['location'] }}
+                                        @endif
                                         @if (!empty($item['startDate']))
-                                            • {{ $item['startDate'] }} @if (!empty($item['endDate'])) - {{ $item['endDate'] }} @else - Present @endif
+                                            • {{ $item['startDate'] }} @if (!empty($item['endDate']))
+                                                - {{ $item['endDate'] }}
+                                            @else
+                                                - Present
+                                            @endif
                                         @endif
                                     </div>
                                     @if (!empty($item['summary']))
@@ -302,7 +394,9 @@
                     @endif
 
                     <!-- 🔹 Certifications Section (safe conditional) 🔹 -->
-                    @if (isset($parsed_data['certifications']) && is_array($parsed_data['certifications']) && !empty($parsed_data['certifications']))
+                    @if (isset($parsed_data['certifications']) &&
+                            is_array($parsed_data['certifications']) &&
+                            !empty($parsed_data['certifications']))
                         <div class="resume-section">
                             <h2 class="resume-section-title">Certifications</h2>
                             <div class="flex flex-wrap gap-3">
@@ -316,7 +410,8 @@
                                             <div class="resume-item-meta">Issued: {{ $cert['date'] }}</div>
                                         @endif
                                         @if (!empty($cert['url']))
-                                            <a href="{{ $cert['url'] }}" target="_blank" class="text-sm text-indigo-600 hover:underline mt-1 inline-block">
+                                            <a href="{{ $cert['url'] }}" target="_blank"
+                                                class="text-sm text-indigo-600 hover:underline mt-1 inline-block">
                                                 View Certificate →
                                             </a>
                                         @endif
@@ -327,14 +422,17 @@
                     @endif
 
                     <!-- 🔹 Publications Section (safe conditional) 🔹 -->
-                    @if (isset($parsed_data['publications']) && is_array($parsed_data['publications']) && !empty($parsed_data['publications']))
+                    @if (isset($parsed_data['publications']) &&
+                            is_array($parsed_data['publications']) &&
+                            !empty($parsed_data['publications']))
                         <div class="resume-section">
                             <h2 class="resume-section-title">Publications</h2>
                             @foreach ($parsed_data['publications'] as $pub)
                                 <div class="resume-item">
                                     <div class="resume-item-header">
                                         @if (!empty($pub['url']))
-                                            <a href="{{ $pub['url'] }}" target="_blank" class="text-indigo-600 hover:underline">
+                                            <a href="{{ $pub['url'] }}" target="_blank"
+                                                class="text-indigo-600 hover:underline">
                                                 {{ $pub['name'] ?? 'Untitled Publication' }}
                                             </a>
                                         @else
@@ -430,16 +528,23 @@
                     @endif
 
                     <!-- No Results Message (when filter yields nothing) -->
-                    @if (!empty($filter_keywords) && 
-                        empty($parsed_data['skills']) && empty($parsed_data['work']) && 
-                        empty($parsed_data['education']) && empty($parsed_data['volunteer']) &&
-                        empty($parsed_data['certifications']) && empty($parsed_data['publications']) &&
-                        empty($parsed_data['awards']) && empty($parsed_data['languages']) &&
-                        empty($parsed_data['interests']) && empty($parsed_data['references']))
+                    @if (
+                        !empty($filter_keywords) &&
+                            empty($parsed_data['skills']) &&
+                            empty($parsed_data['work']) &&
+                            empty($parsed_data['education']) &&
+                            empty($parsed_data['volunteer']) &&
+                            empty($parsed_data['certifications']) &&
+                            empty($parsed_data['publications']) &&
+                            empty($parsed_data['awards']) &&
+                            empty($parsed_data['languages']) &&
+                            empty($parsed_data['interests']) &&
+                            empty($parsed_data['references']))
                         <div class="text-center py-8 text-gray-500">
                             <p class="text-lg mb-2">😕 No results match your filter</p>
                             <p class="text-sm">Try adjusting your keywords or clearing the filter to see all content.</p>
-                            <a href="{{ route('resumes.show', $resume) }}" class="mt-4 inline-block text-indigo-600 hover:underline">
+                            <a href="{{ route('resumes.show', $resume) }}"
+                                class="mt-4 inline-block text-indigo-600 hover:underline">
                                 Clear filter →
                             </a>
                         </div>
