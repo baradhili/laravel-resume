@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Techsemicolon\Latex;
 
 class ResumeController extends Controller
 {
@@ -265,6 +266,62 @@ class ResumeController extends Controller
                 'Expires' => '0',
             ]
         );
+    }
+
+    /**
+     * Download filtered resume as JSON file.
+     */
+    public function downloadPDF(Resume $resume, Request $request): StreamedResponse
+    {
+        // Authorize: user can only download their own resumes
+        if ($resume->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        // Get filter parameters from query string
+        $keywords = $request->query('keywords');
+        $matchAll = $request->boolean('match_all', false);
+
+        // Start with original parsed data
+        $data = $resume->parsed_data;
+
+        // Apply filtering if keywords provided
+        if (!empty($keywords)) {
+            $data = ResumeFilterService::filter($data, $keywords, $matchAll);
+        }
+
+        // Add metadata about the export
+        $data['$exportedAt'] = now()->toIso8601String();
+        $data['$exportedBy'] = Auth::user()->name ?? Auth::user()->email;
+        
+        if (!empty($keywords)) {
+            $data['$filter'] = [
+                'keywords' => $keywords,
+                'match_all' => $matchAll,
+                'applied_at' => now()->toIso8601String(),
+            ];
+        }
+
+        // Generate filename
+        $safeName = preg_replace('/[^a-z0-9]+/i', '-', strtolower($resume->name ?: 'resume'));
+        $filename = $safeName . '-filtered-' . now()->format('Y-m-d') . '.json';
+
+        // // Return streamed JSON response
+        // return response()->streamDownload(
+        //     function () use ($data) {
+        //         echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        //     },
+        //     $filename,
+        //     [
+        //         'Content-Type' => 'application/json',
+        //         'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        //         'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        //         'Pragma' => 'no-cache',
+        //         'Expires' => '0',
+        //     ]
+        // );
+
+         return (new Latex)->dryRun();
     }
 
 }
