@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft-07/schema",
-    "$id": "https://raw.githubusercontent.com/jgilman1337/resume-schema/refs/heads/master/schema.json",
+    "$id": "https://raw.githubusercontent.com/baradhili/resume-schema/refs/heads/master/schema.json",
     "title": "Resume Schema",
     "version": "2.0.0",
     "type": "object",
@@ -38,7 +38,7 @@
                 },
                 "location": {
                     "description": "Where the subject is from. Can be a general region or their exact home address.",
-                    "$ref": "types.json#/definitions/location"
+                    "$ref": "#/definitions/location"
                 },
                 "links": {
                     "type": "array",
@@ -75,12 +75,12 @@
                         "description": "The name of the company, e.g. 'Facebook'."
                     },
                     "location": {
-                        "description": "Where the job is located. For fully remote jobs, simply fill in the country code of the position and leave the other fields as `null`.",
-                        "$ref": "types.json#/definitions/location"
+                        "type": "string",
+                        "description": "The location the job is/was, e.g. 'Menlo Park, CA'. If the job is/was remote, specify 'Remote'."
                     },
                     "description": {
                         "type": "string",
-                        "description": "A short description about the job."
+                        "description": "A short, 1 sentence maximum description of the company, e.g. 'Social Media Company'."
                     },
                     "position": {
                         "type": "string",
@@ -93,11 +93,11 @@
                     },
                     "startDate": {
                         "description": "The date on which this position was started.",
-                        "$ref": "types.json#/definitions/iso8601"
+                        "$ref": "#/definitions/iso8601"
                     },
                     "endDate": {
                         "description": "The date on which this position was stopped. If current and ongoing, specify a blank string as the value for this key.",
-                        "$ref": "types.json#/definitions/iso8601"
+                        "$ref": "#/definitions/iso8601"
                     },
                     "summary": {
                         "type": "string",
@@ -112,52 +112,6 @@
                             "description": "e.g. Increased profits by 20% from 2011-2012 through viral advertising."
                         }
                     },
-                    "keywords": {
-                        "description": "A list of keywords pertaining to the listing; sourced from the qualifications (required and optional), job description, and responsibilities.",
-                        "$ref": "types.json#/definitions/keywords"
-                    },
-                    "title": {
-                        "type": "string",
-                        "description": "The name of the job, e.g. 'Web Developer'."
-                    },
-                    "company": {
-                        "type": "string",
-                        "description": "The company offering the role, e.g. 'Microsoft'."
-                    },
-                    "type": {
-                        "description": "The type of job this is, e.g. Full-time, part-time, contract, etc.",
-                        "$ref": "types.json#/definitions/jobType"
-                    },
-                    "date": {
-                        "description": "The date the job was posted in ISO8601 format.",
-                        "$ref": "types.json#/definitions/iso8601"
-                    },
-                    "remote": {
-                        "type": "string",
-                        "description": "The level of remote work available, where 'Full' is fully online and 'None' is strictly in-person.",
-                        "enum": [
-                            "Full",
-                            "Hybrid",
-                            "None"
-                        ]
-                    },
-                    "salary": {
-                        "type": "string",
-                        "description": "The expected salary or range of salaries plus the base time unit, e.g. $100,000/yearly, $5,000 - $6,000/monthly, $25/hourly."
-                    },
-                    "experience": {
-                        "description": "The experience level required for the job, e.g. 'Senior', 'Junior', 'Mid-level'.",
-                        "$ref": "types.json#/definitions/experienceLevel"
-                    },
-                    "responsibilities": {
-                        "type": "array",
-                        "description": "What the job entails.",
-                        "additionalItems": false,
-                        "items": {
-                            "type": "string",
-                            "description": "e.g. Build out a new API for our customer base."
-                        }
-                    },
                     "crossReferencedProjects": {
                         "type": "array",
                         "description": "A list of the IDs of the projects that are cross-referenced with this job. Particularly useful for consulting roles.",
@@ -167,54 +121,11 @@
                             "description": "The ID number of the project for cross-referencing purposes."
                         }
                     },
-                    "qualifications": {
-                        "type": "array",
-                        "description": "A list of the qualifications that are required for this position.",
-                        "additionalItems": false,
-                        "items": {
-                            "type": "string",
-                            "description": "The required qualification, e.g. 'undergraduate degree'."
-                        }
-                    },
-                    "optionalQualifications": {
-                        "type": "array",
-                        "description": "A list of the qualifications that are optional for this position.",
-                        "additionalItems": false,
-                        "items": {
-                            "type": "string",
-                            "description": "The optional qualification, e.g. 'undergraduate degree'."
-                        }
-                    },
-                    "skills": {
-                        "type": "array",
-                        "description": "A list of the skills utilized while doing work for the job.",
-                        "additionalItems": false,
-                        "items": {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "properties": {
-                                "name": {
-                                    "type": "string",
-                                    "description": "The name of the skill, e.g. 'Web Development'."
-                                },
-                                "level": {
-                                    "description": "The mastery level of the skill.",
-                                    "$ref": "types.json#/definitions/masteryLevel"
-                                },
-                                "keywords": {
-                                    "description": "A list of keywords pertaining to this specific skill.",
-                                    "$ref": "types.json#/definitions/keywords"
-                                }
-                            }
-                        }
-                    },
-                    "meta": {
-                        "$ref": "types.json#/definitions/meta"
+                    "keywords": {
+                        "description": "A list of keywords pertaining to this job position.",
+                        "$ref": "#/definitions/keywords"
                     }
-                },
-                "required": [
-                    "meta"
-                ]
+                }
             }
         },
         "volunteer": {
@@ -240,11 +151,11 @@
                     },
                     "startDate": {
                         "description": "The date on which this volunteer position was started.",
-                        "$ref": "types.json#/definitions/iso8601"
+                        "$ref": "#/definitions/iso8601"
                     },
                     "endDate": {
                         "description": "The date on which this volunteer position was stopped. If current and ongoing, specify a blank string as the value for this key.",
-                        "$ref": "types.json#/definitions/iso8601"
+                        "$ref": "#/definitions/iso8601"
                     },
                     "summary": {
                         "type": "string",
@@ -261,7 +172,7 @@
                     },
                     "keywords": {
                         "description": "A list of keywords pertaining to this volunteer position.",
-                        "$ref": "types.json#/definitions/keywords"
+                        "$ref": "#/definitions/keywords"
                     }
                 }
             }
@@ -353,11 +264,11 @@
                     },
                     "startDate": {
                         "description": "The date on which the education at this institution was started.",
-                        "$ref": "types.json#/definitions/iso8601"
+                        "$ref": "#/definitions/iso8601"
                     },
                     "endDate": {
                         "description": "The date on which the education at this institution was stopped. If current and ongoing, specify a blank string as the value for this key.",
-                        "$ref": "types.json#/definitions/iso8601"
+                        "$ref": "#/definitions/iso8601"
                     },
                     "gpa": {
                         "type": "string",
@@ -402,7 +313,7 @@
                                 },
                                 "inductionDate": {
                                     "description": "The date of induction into the honor society.",
-                                    "$ref": "types.json#/definitions/iso8601"
+                                    "$ref": "#/definitions/iso8601"
                                 }
                             }
                         }
@@ -417,7 +328,7 @@
                     },
                     "keywords": {
                         "description": "A list of keywords pertaining to this education.",
-                        "$ref": "types.json#/definitions/keywords"
+                        "$ref": "#/definitions/keywords"
                     },
                     "notes": {
                         "type": "string",
@@ -439,7 +350,7 @@
                         "description": "The title of the award, e.g. 'Nobel Peace Prize'."
                     },
                     "date": {
-                        "$ref": "types.json#/definitions/iso8601"
+                        "$ref": "#/definitions/iso8601"
                     },
                     "awarder": {
                         "type": "string",
@@ -451,7 +362,7 @@
                     },
                     "keywords": {
                         "description": "A list of keywords pertaining to this award.",
-                        "$ref": "types.json#/definitions/keywords"
+                        "$ref": "#/definitions/keywords"
                     }
                 }
             }
@@ -470,7 +381,7 @@
                     },
                     "date": {
                         "description": "The date the certificate was issued.",
-                        "$ref": "types.json#/definitions/iso8601"
+                        "$ref": "#/definitions/iso8601"
                     },
                     "issuer": {
                         "type": "string",
@@ -487,7 +398,7 @@
                     },
                     "keywords": {
                         "description": "A list of keywords pertaining to this certificate.",
-                        "$ref": "types.json#/definitions/keywords"
+                        "$ref": "#/definitions/keywords"
                     }
                 }
             }
@@ -510,7 +421,7 @@
                     },
                     "releaseDate": {
                         "description": "The date of the publication.",
-                        "$ref": "types.json#/definitions/iso8601"
+                        "$ref": "#/definitions/iso8601"
                     },
                     "url": {
                         "type": "string",
@@ -523,7 +434,7 @@
                     },
                     "keywords": {
                         "description": "A list of keywords pertaining to this publication.",
-                        "$ref": "types.json#/definitions/keywords"
+                        "$ref": "#/definitions/keywords"
                     }
                 }
             }
@@ -542,11 +453,11 @@
                     },
                     "level": {
                         "description": "The experience level of the skill, e.g. 'Novice', 'Intermediate', 'Advanced', etc.",
-                        "$ref": "types.json#/definitions/masteryLevel"
+                        "$ref": "#/definitions/masteryLevel"
                     },
                     "keywords": {
                         "description": "A list of keywords pertaining to this skill.",
-                        "$ref": "types.json#/definitions/keywords"
+                        "$ref": "#/definitions/keywords"
                     }
                 }
             }
@@ -591,7 +502,7 @@
                     },
                     "keywords": {
                         "description": "A list of keywords pertaining to this interest.",
-                        "$ref": "types.json#/definitions/keywords"
+                        "$ref": "#/definitions/keywords"
                     }
                 }
             }
@@ -646,15 +557,15 @@
                     },
                     "keywords": {
                         "description": "A list of keywords pertaining to this project.",
-                        "$ref": "types.json#/definitions/keywords"
+                        "$ref": "#/definitions/keywords"
                     },
                     "startDate": {
                         "description": "The date on which work on this project was started.",
-                        "$ref": "types.json#/definitions/iso8601"
+                        "$ref": "#/definitions/iso8601"
                     },
                     "endDate": {
                         "description": "The date on which work on this project was stopped. If current and ongoing, specify a blank string as the value for this key.",
-                        "$ref": "types.json#/definitions/iso8601"
+                        "$ref": "#/definitions/iso8601"
                     },
                     "url": {
                         "type": "string",
@@ -682,73 +593,95 @@
             }
         },
         "meta": {
-            "$ref": "types.json#/definitions/meta"
-        },
-        "categories": {
-            "type": "object",
-            "description": "Top-level categorization of a keyword, e.g. 'devops', 'saas'.",
-            "patternProperties": {
-                "^[a-zA-Z0-9_-]+$": {
-                    "type": "object",
-                    "properties": {
-                        "displayName": {
-                            "type": "string",
-                            "description": "The display name of the category, e.g. 'Database', 'Programming Languages'."
-                        },
-                        "description": {
-                            "type": "string"
-                        }
-                    },
-                    "required": [
-                        "displayName"
-                    ],
-                    "additionalProperties": false
-                }
-            },
-            "additionalProperties": false
-        },
-        "keywordsDictionary": {
-            "type": "object",
-            "description": "Global keyword definitions map with metadata and category assignment.",
-            "patternProperties": {
-                "^[a-zA-Z0-9_-]+$": {
-                    "type": "object",
-                    "properties": {
-                        "displayName": {
-                            "type": "string",
-                            "description": "The display name of the keyword, e.g. 'JavaScript', 'Amazon AWS'."
-                        },
-                        "aliases": {
-                            "type": "array",
-                            "items": {
-                                "type": "string",
-                                "description": "A list of aliases that can also map to this keyword, e.g. 'jscript', 'amazon_aws'."
-                            }
-                        },
-                        "category": {
-                            "type": "string",
-                            "description": "Must match a category key from the top-level categories object."
-                        }
-                    },
-                    "required": [
-                        "displayName",
-                        "category"
-                    ],
-                    "additionalProperties": false
-                }
-            },
-            "additionalProperties": false
+            "$ref": "#/definitions/meta"
         }
     },
     "required": [
         "meta"
     ],
-    "$comment": "Merged from baradhili/resume-schema on 2026-03-25T04:39:58+00:00",
-    "$mergedAt": "2026-03-25T04:39:58+00:00",
+    "definitions": {
+        "location": {
+            "type": "object",
+            "description": "A location in the world. Can be a full address, a partial address, or simply a listing of the country and region.",
+            "additionalProperties": false,
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "description": "The street name and number components of the location."
+                },
+                "postalCode": {
+                    "type": "string",
+                    "description": "Also known as a zip code for US addresses."
+                },
+                "city": {
+                    "type": "string"
+                },
+                "countryCode": {
+                    "type": "string",
+                    "description": "Country code as per ISO-3166-1 ALPHA-2, e.g. US, AU, IN.",
+                    "pattern": "[A-Z]{2}"
+                },
+                "region": {
+                    "type": "string",
+                    "description": "Can be a state, province, prefecture, oblast, etc."
+                }
+            }
+        },
+        "iso8601": {
+            "type": "string",
+            "description": "Similar to the standard date type, but each section after the year is optional. e.g. 2014-06-29 or 2023-04. The value can also be an empty string for ongoing dates.",
+            "pattern": "^([1-2][0-9]{3}-[0-1][0-9]-[0-3][0-9]|[1-2][0-9]{3}-[0-1][0-9]|[1-2][0-9]{3}|)$"
+        },
+        "keywords": {
+            "type": "array",
+            "description": "A list of keywords that are related to the parent object. Due to the nature of being keywords, the items within may have aliases attached. However, each item should appear ONCE and matched on using a separate dictionary to keep this array as slim as possible.",
+            "additionalItems": false,
+            "items": {
+                "type": "string",
+                "description": "e.g. HTML"
+            }
+        },
+        "masteryLevel": {
+            "type": "string",
+            "description": "One of five mastery levels for a particular skill.",
+            "enum": [
+                "Novice",
+                "Intermediate",
+                "Advanced",
+                "Expert",
+                "Master"
+            ]
+        },
+        "meta": {
+            "type": "object",
+            "description": "The schema version and any other tooling configuration lives here.",
+            "additionalProperties": false,
+            "properties": {
+                "canonical": {
+                    "type": "string",
+                    "description": "URL (as per RFC 3986) to latest version of this document.",
+                    "format": "uri"
+                },
+                "version": {
+                    "type": "string",
+                    "description": "A version field which follows semver - e.g. `1.0.0`. Regexp is per the recommendation of semver.org",
+                    "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+                },
+                "lastModified": {
+                    "type": "string",
+                    "description": "Using ISO 8601 with 'YYYY-MM-DDThh:mm:ss'.",
+                    "format": "date-time"
+                }
+            },
+            "required": [
+                "version"
+            ]
+        }
+    },
+    "$comment": "Merged from baradhili/resume-schema on 2026-03-25T05:00:41+00:00",
+    "$mergedAt": "2026-03-25T05:00:41+00:00",
     "$sourceFiles": [
         "types.json",
-        "keywords-dictionary-schema.json",
-        "job-schema.json",
         "schema.json"
     ]
 }

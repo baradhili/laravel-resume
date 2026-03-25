@@ -12,41 +12,47 @@ class FetchResumeSchema extends Command
     protected $signature = 'schema:fetch 
                             {--force : Overwrite existing schema files}
                             {--output= : Output filename (default: json-resume-merged.json)}
-                            {--branch=master : Git branch to fetch from}';
+                            {--branch=master : Git branch to fetch from}
+                            {--force-defs-syntax : Force use of $defs instead of definitions}
+                            {--use-tabs : Use tabs instead of spaces for indentation}';
     
-    protected $description = 'Fetch and merge JSON Resume schema files from GitHub';
+    protected $description = 'Fetch and merge JSON Resume schema files (types.json → schema.json)';
 
     // GitHub repo configuration
     protected string $repoOwner = 'baradhili';
     protected string $repoName = 'resume-schema';
     protected string $baseUrl = 'https://raw.githubusercontent.com';
 
-    // Schema files to fetch (in dependency order)
+    // Only these two files are merged (per Python script logic)
     protected array $schemaFiles = [
         'types' => 'types.json',
-        'keywords-dictionary' => 'keywords-dictionary-schema.json',
-        'job' => 'job-schema.json',
         'main' => 'schema.json',
     ];
+
+    // Definition key names per JSON Schema draft versions
+    protected const DEFS_KEY_OLD = 'definitions';
+    protected const DEFS_KEY_NEW = '$defs';
 
     public function handle(): int
     {
         $this->info('🔄 Fetching JSON Resume schema files from GitHub...');
 
-        $branch = $this->option('branch') ?? 'master';
+        $branch = $this->option('branch');
         $outputFile = $this->option('output') ?? 'json-resume-merged.json';
         $force = $this->option('force');
+        $forceDefsSyntax = $this->option('force-defs-syntax');
+        $useTabs = $this->option('use-tabs');
 
         // Ensure output directory exists
         $outputPath = resource_path("schemas/{$outputFile}");
         File::ensureDirectoryExists(dirname($outputPath));
 
-        // Fetch all schema files
+        // Fetch schema files
         $schemas = [];
         foreach ($this->schemaFiles as $key => $filename) {
-            $url = "{$this->baseUrl}/{$this->repoOwner}/{$this->repoName}/refs/heads/{$branch}/{$filename}";  
+            $url = "{$this->baseUrl}/{$this->repoOwner}/{$this->repoName}/refs/heads/{$branch}/{$filename}";
             
-            $this->line("  ⬇️  Fetching {$filename}... from {$url}");
+            $this->line("  ⬇️  Fetching {$filename}...");
             
             $response = Http::timeout(30)->get($url);
             
@@ -56,25 +62,34 @@ class FetchResumeSchema extends Command
             }
 
             $content = $response->body();
-            $decoded = json_decode($content, true);
-
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                $this->error("  ✗ Invalid JSON in {$filename}: " . json_last_error_msg());
-                return Command::FAILURE;
-            }
+            $decoded = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
 
             $schemas[$key] = $decoded;
             $this->line("  ✓ Loaded {$filename}");
         }
 
-        // Merge schemas
-        $this->line("\n🔗 Merging schemas...");
-        $merged = $this->mergeSchemas($schemas);
+        // Merge schemas using Python script logic
+        $this->line("\n🔗 Merging schemas (types.json → schema.json)...");
+        $merged = $this->mergeSchemas(
+            $schemas['types'],
+            $schemas['main'],
+            $forceDefsSyntax
+        );
 
         // Add metadata
         $merged['$comment'] = "Merged from {$this->repoOwner}/{$this->repoName} on " . now()->toIso8601String();
         $merged['$mergedAt'] = now()->toIso8601String();
-        $merged['$sourceFiles'] = array_values($this->schemaFiles);
+        $merged['$sourceFiles'] = ['types.json', 'schema.json'];
+
+        // Encode with proper indentation
+        $options = JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES;
+        if (!$useTabs) {
+            $json = json_encode($merged, $options);
+        } else {
+            // Encode with spaces, then convert to tabs
+            $json = json_encode($merged, $options);
+            $json = preg_replace('/^ {4}/m', "\t", $json); // 4 spaces → 1 tab
+        }
 
         // Write to file
         if (File::exists($outputPath) && !$force) {
@@ -84,7 +99,7 @@ class FetchResumeSchema extends Command
             }
         }
 
-        File::put($outputPath, json_encode($merged, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        File::put($outputPath, $json);
         
         $this->info("\n✅ Schema merged and saved to: {$outputPath}");
         $this->info("📊 File size: " . $this->formatBytes(filesize($outputPath)));
@@ -93,111 +108,122 @@ class FetchResumeSchema extends Command
     }
 
     /**
-     * Merge multiple schema files into one consolidated schema
+     * Merge types.json definitions into schema.json, including only used refs.
+     * Replicates Python merge_schemas() logic exactly.
      */
-    protected function mergeSchemas(array $schemas): array
+    protected function mergeSchemas(array $typesSchema, array $schema, bool $forceDefsSyntax): array
     {
-        // Start with the main schema
-        $merged = $schemas['main'] ?? [];
+        $typesFilename = 'types.json';
 
-        // Merge types.json - add to $defs if present
-        if (!empty($schemas['types']['$defs'])) {
-            $merged['$defs'] = array_merge(
-                $merged['$defs'] ?? [],
-                $schemas['types']['$defs']
-            );
-            $this->line("  ✓ Merged " . count($schemas['types']['$defs']) . " type definitions");
+        // Verify schema versions match
+        $typesSchemaVer = $typesSchema['$schema'] ?? '';
+        $schemaVer = $schema['$schema'] ?? '';
+        
+        if ($typesSchemaVer !== $schemaVer) {
+            $this->error("Error: Schema version mismatch between schema.json and types.json");
+            $this->error("  schema.json: {$schemaVer}");
+            $this->error("  types.json:  {$typesSchemaVer}");
+            exit(1);
         }
 
-        // Merge keywords-dictionary-schema.json
-        if (!empty($schemas['keywords-dictionary'])) {
-            // Add keywords dictionary to $defs
-            if (isset($schemas['keywords-dictionary']['$defs'])) {
-                $merged['$defs'] = array_merge(
-                    $merged['$defs'] ?? [],
-                    $schemas['keywords-dictionary']['$defs']
-                );
-                $this->line("  ✓ Merged keywords dictionary definitions");
+        // Determine definition key name based on draft version
+        $defKeyname = self::DEFS_KEY_OLD;
+        $defOutKeyname = self::DEFS_KEY_OLD;
+        
+        if (str_contains($typesSchemaVer, 'draft/2020-12/schema')) {
+            $defKeyname = self::DEFS_KEY_NEW;
+            $defOutKeyname = self::DEFS_KEY_NEW;
+        }
+
+        // Force $defs syntax if requested
+        if ($forceDefsSyntax) {
+            $defOutKeyname = self::DEFS_KEY_NEW;
+        }
+
+        // Extract ALL definitions from types.json
+        $allDefs = $typesSchema[$defKeyname] ?? [];
+
+        // Find ALL $ref values used in main schema that point to types.json
+        $usedRefs = [];
+        $this->collectRefs($schema, $typesFilename, $defKeyname, $usedRefs);
+
+        // Filter definitions - ONLY include used ones
+        $usedDefs = [];
+        foreach ($usedRefs as $defName) {
+            if (isset($allDefs[$defName])) {
+                $usedDefs[$defName] = $allDefs[$defName];
             }
-            // Merge any root-level properties if needed
-            $merged = $this->deepMerge($merged, $schemas['keywords-dictionary'], ['properties', '$defs']);
         }
 
-        // Replace/merge work schema from job-schema.json
-        if (!empty($schemas['job'])) {
-            // The job-schema.json likely defines a "work" item schema
-            // We need to update the main schema's work.items.$ref or work.items definition
+        $this->line("  ✓ Found " . count($usedRefs) . " referenced definitions");
+        $this->line("  ✓ Including " . count($usedDefs) . " definitions in merged schema");
+
+        // Remove old definitions key if present, add merged used definitions
+        if (isset($schema[$defKeyname])) {
+            unset($schema[$defKeyname]);
+        }
+        $schema[$defOutKeyname] = $usedDefs;
+
+        // Fix all external refs to internal refs
+        $this->fixRefs($schema, $typesFilename, $defKeyname, $defOutKeyname);
+
+        // If forcing $defs syntax, update the $schema identifier
+        if ($forceDefsSyntax && $defOutKeyname === self::DEFS_KEY_NEW) {
+            $schema['$schema'] = 'https://json-schema.org/draft/2020-12/schema';
+        }
+
+        return $schema;
+    }
+
+    /**
+     * Recursively collect all $ref values that point to types.json definitions.
+     */
+    protected function collectRefs(mixed $obj, string $typesFilename, string $defKeyname, array &$usedRefs): void
+    {
+        if (is_array($obj)) {
+            if (isset($obj['$ref']) && is_string($obj['$ref'])) {
+                $refVal = $obj['$ref'];
+                $prefix = "{$typesFilename}#/{$defKeyname}/";
+                
+                if (str_starts_with($refVal, $prefix)) {
+                    $defName = substr($refVal, strlen($prefix));
+                    if (!in_array($defName, $usedRefs)) {
+                        $usedRefs[] = $defName;
+                    }
+                }
+            }
             
-            if (isset($merged['properties']['work']['items'])) {
-                // Replace the work items definition with the job schema
-                $merged['properties']['work']['items'] = $this->mergeSchemaDefinitions(
-                    $merged['properties']['work']['items'],
-                    $schemas['job']
-                );
-                $this->line("  ✓ Updated work schema with job-schema.json");
+            foreach ($obj as $value) {
+                $this->collectRefs($value, $typesFilename, $defKeyname, $usedRefs);
+            }
+        }
+    }
+
+    /**
+     * Recursively convert external refs to internal refs.
+     */
+    protected function fixRefs(mixed &$obj, string $typesFilename, string $defKeyname, string $defOutKeyname): void
+    {
+        if (is_array($obj)) {
+            if (isset($obj['$ref']) && is_string($obj['$ref'])) {
+                $refVal = $obj['$ref'];
+                $prefix = "{$typesFilename}#/{$defKeyname}/";
+                
+                if (str_starts_with($refVal, $prefix)) {
+                    $defName = substr($refVal, strlen($prefix));
+                    $obj['$ref'] = "#/{$defOutKeyname}/{$defName}";
+                }
             }
             
-            // Also add any job-related $defs
-            if (!empty($schemas['job']['$defs'])) {
-                $merged['$defs'] = array_merge(
-                    $merged['$defs'] ?? [],
-                    $schemas['job']['$defs']
-                );
-                $this->line("  ✓ Merged " . count($schemas['job']['$defs']) . " job definitions");
+            foreach ($obj as &$value) {
+                $this->fixRefs($value, $typesFilename, $defKeyname, $defOutKeyname);
             }
+            unset($value); // Break reference
         }
-
-        // Clean up any empty $defs
-        if (isset($merged['$defs']) && empty($merged['$defs'])) {
-            unset($merged['$defs']);
-        }
-
-        return $merged;
     }
 
     /**
-     * Deep merge two schema arrays, focusing on specific keys
-     */
-    protected function deepMerge(array $target, array $source, array $mergeKeys = []): array
-    {
-        foreach ($source as $key => $value) {
-            if (in_array($key, $mergeKeys) && isset($target[$key]) && is_array($target[$key]) && is_array($value)) {
-                $target[$key] = array_merge($target[$key], $value);
-            } elseif (!isset($target[$key])) {
-                $target[$key] = $value;
-            }
-        }
-        return $target;
-    }
-
-    /**
-     * Merge schema definitions, handling $ref and nested properties
-     */
-    protected function mergeSchemaDefinitions(array $base, array $override): array
-    {
-        // If override has properties, merge them
-        if (!empty($override['properties'])) {
-            $base['properties'] = array_merge($base['properties'] ?? [], $override['properties']);
-        }
-        
-        // If override has required fields, merge them
-        if (!empty($override['required'])) {
-            $base['required'] = array_unique(array_merge($base['required'] ?? [], $override['required']));
-        }
-        
-        // Merge any additional schema keywords
-        $schemaKeys = ['type', 'description', 'examples', 'default', 'minItems', 'maxItems'];
-        foreach ($schemaKeys as $key) {
-            if (isset($override[$key]) && !isset($base[$key])) {
-                $base[$key] = $override[$key];
-            }
-        }
-        
-        return $base;
-    }
-
-    /**
-     * Format bytes to human-readable string
+     * Format bytes to human-readable string.
      */
     protected function formatBytes(int $bytes, int $precision = 2): string
     {
