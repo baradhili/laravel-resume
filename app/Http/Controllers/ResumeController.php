@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Resume;
 use App\Services\JsonSchemaValidator;
 use App\Services\ResumeFilterService;
+use App\Services\ResumePDFService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Techsemicolon\Latex;
 
 class ResumeController extends Controller
@@ -238,7 +240,7 @@ class ResumeController extends Controller
         // Add metadata about the export
         $data['$exportedAt'] = now()->toIso8601String();
         $data['$exportedBy'] = Auth::user()->name ?? Auth::user()->email;
-        
+
         if (!empty($keywords)) {
             $data['$filter'] = [
                 'keywords' => $keywords,
@@ -271,7 +273,7 @@ class ResumeController extends Controller
     /**
      * Download filtered resume as JSON file.
      */
-    public function downloadPDF(Resume $resume, Request $request): StreamedResponse
+    public function downloadPDF(Resume $resume, Request $request): BinaryFileResponse
     {
         // Authorize: user can only download their own resumes
         if ($resume->user_id !== Auth::id()) {
@@ -293,7 +295,7 @@ class ResumeController extends Controller
         // Add metadata about the export
         $data['$exportedAt'] = now()->toIso8601String();
         $data['$exportedBy'] = Auth::user()->name ?? Auth::user()->email;
-        
+
         if (!empty($keywords)) {
             $data['$filter'] = [
                 'keywords' => $keywords,
@@ -302,26 +304,38 @@ class ResumeController extends Controller
             ];
         }
 
-        // Generate filename
-        $safeName = preg_replace('/[^a-z0-9]+/i', '-', strtolower($resume->name ?: 'resume'));
-        $filename = $safeName . '-filtered-' . now()->format('Y-m-d') . '.json';
 
-        // // Return streamed JSON response
-        // return response()->streamDownload(
-        //     function () use ($data) {
-        //         echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
-        //     },
-        //     $filename,
-        //     [
-        //         'Content-Type' => 'application/json',
-        //         'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        //         'Cache-Control' => 'no-cache, no-store, must-revalidate',
-        //         'Pragma' => 'no-cache',
-        //         'Expires' => '0',
-        //     ]
-        // );
+        try {
+            return ResumePDFService::download($resume, $request, [
+                'include_metadata' => true,
+                'bin_path' => config('services.latex.bin_path'),
+            ]);
+        } catch (LatexException $e) {
+            Log::error('PDF generation failed: ' . $e->getMessage(), [
+                'resume_id' => $resume->id,
+                'user_id' => Auth::id(),
+                'error' => $e->getTraceAsString(),
+            ]);
 
-         return (new Latex)->dryRun();
+            return back()->withErrors([
+                'pdf' => 'Failed to generate PDF: ' . $e->getMessage()
+            ]);
+        }
     }
 
+    // Define the absolute path to your fonts
+    // $fontPath = storage_path('fonts/');
+    // return (new Latex('latex.resume'))
+    //     ->with($templateData)
+    //     ->binPath('/usr/bin/lualatex')
+    //     ->env([
+    //         'HOME' => '/tmp',
+    //         'PATH' => '/usr/local/bin:/usr/bin:/bin',
+    //         'TEXMFVAR' => '/tmp/texmfv',
+    //         'OSFONTDIR' => $fontPath,
+    //     ])
+    //     ->download($filename);
+
 }
+
+
