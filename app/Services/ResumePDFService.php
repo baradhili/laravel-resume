@@ -152,6 +152,7 @@ class ResumePDFService
             'location' => self::escapeLatex(self::formatLocation($basics['location'] ?? [])),
             'summary' => self::escapeLatex($basics['summary'] ?? ''),
             'profiles' => self::formatProfiles($basics['profiles'] ?? []),
+            'projects' => self::formatProjects($parsedData['projects'] ?? []),
 
             // Sections (filtered, with escaped text)
             'skills' => self::formatSkills($parsedData['skills'] ?? []),
@@ -233,8 +234,28 @@ class ResumePDFService
                 'endDate' => $job['endDate'] ?? 'Present',
                 'summary' => self::escapeLatex($job['summary'] ?? ''),
                 'highlights' => array_map(fn($h) => self::escapeLatex($h), $job['highlights'] ?? []),
+                'crossReferencedProjects' => $job['crossReferencedProjects'] ?? [],
             ];
         }, $work);
+    }
+
+    /**
+     * Format projects for template (with escaped text).
+     */
+    protected static function formatProjects(array $projects): array
+    {
+        return array_map(function ($project) {
+            return [
+                'id' => $project['id'] ?? '',
+                'name' => self::escapeLatex($project['name'] ?? ''),
+                'description' => self::escapeLatex($project['description'] ?? ''),
+                'summary' => self::escapeLatex($project['summary'] ?? ''),
+                'url' => self::escapeLatex($project['url'] ?? ''),
+                'startDate' => $project['startDate'] ?? '',
+                'endDate' => $project['endDate'] ?? '',
+                'keywords' => array_map(fn($k) => self::escapeLatex($k), $project['keywords'] ?? []),
+            ];
+        }, $projects);
     }
 
     /**
@@ -306,8 +327,6 @@ class ResumePDFService
         if (empty($text))
             return '';
 
-        Log::debug('Raw LaTeX text: ' . $text);
-        
         // Order matters: escape backslash first
         $search = ['\\', '{', '}', '&', '%', '$', '#', '_', '^', '~'];
         $replace = [

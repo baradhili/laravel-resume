@@ -6,6 +6,7 @@
 \usepackage{hyperref}
 \usepackage{xcolor}
 \usepackage{enumitem}
+\usepackage{titlesec}
 
 % Simple page layout
 \geometry{left=2cm, right=2cm, top=2cm, bottom=2cm}
@@ -13,46 +14,38 @@
 % Basic colors
 \definecolor{heading}{RGB}{0, 0, 0}
 \definecolor{meta}{RGB}{100, 100, 100}
+\definecolor{linkcolor}{RGB}{0, 0, 200}
 
 % Hyperlink setup
 \hypersetup{
     colorlinks=true,
-    linkcolor=blue,
-    urlcolor=blue,
+    linkcolor=linkcolor,
+    urlcolor=linkcolor,
     pdfborder={0 0 0}
 }
 
 % Simple section formatting
-\usepackage{titlesec}
 \titleformat{\section}{\large\bfseries\color{heading}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
 
 \begin{document}
 
 % ===== HEADER: Name & Contact =====
 \begin{center}
-    {\Huge\bfseries {{ $name ?? 'No Name' }}}\\[0.5em]
+    {\Huge\bfseries {!! $name ?? 'No Name' !!}}\\[0.5em]
     \small\color{meta}
-    @if(!empty($email))\href{mailto:{{ $email }}}{ {{ $email }}}\quad @endif
-    @if(!empty($mobile)){{ $mobile }}\quad @endif
-    @if(!empty($location)){{ $location }} @endif
+    @if(!empty($email))\href{mailto:{!! $email !!}}{ {!! $email !!}}\quad @endif
+    @if(!empty($mobile)){!! $mobile !!}\quad @endif
+    @if(!empty($location)){!! $location !!} @endif
     \par
-    @if(!empty($position))\textbf{Position:} {{ $position }}\par @endif
-    @if(!empty($quote))\textit{``{{ $quote }}''}\par @endif
+    @if(!empty($position))\textbf{Position:} {!! $position !!}\par @endif
+    @if(!empty($quote))\textit{``{!! $quote !!}''}\par @endif
 \end{center}
-
-% ===== DEBUG INFO (remove in production) =====
-\section*{Debug Information}
-\begin{itemize}
-    \item Generated: {{ $generatedAt ?? 'N/A' }}
-    \item Filtered: {{ $isFiltered ? 'Yes' : 'No' }}
-    @if(!empty($filterKeywords))\item Filter Keywords: {{ $filterKeywords }} @endif
-    \item Template: test-resume.tex.blade.php
-\end{itemize}
 
 % ===== SUMMARY =====
 @if(!empty($summary))
 \section{Summary}
-{{ $summary }}
+{!! $summary !!}
 @endif
 
 % ===== SKILLS =====
@@ -60,31 +53,68 @@
 \section{Skills}
 \begin{itemize}
     @foreach($skills as $skill)
-        \item \textbf{ {{ $skill['name'] ?? 'Unnamed' }} }: {{ $skill['keywords'] ?? '' }}
+        \item \textbf{ {!! $skill['name'] ?? 'Unnamed' !!} }
     @endforeach
 \end{itemize}
 @endif
 
-% ===== WORK EXPERIENCE =====
+% ===== WORK EXPERIENCE WITH LINKED PROJECTS =====
 @if(!empty($work) && is_array($work))
 \section{Work Experience}
     @foreach($work as $job)
-        \subsection*{ {{ $job['position'] ?? 'Unknown Position' }} }
-        \textit{ {{ $job['employer'] ?? 'Unknown Employer' }} }
-        @if(!empty($job['location'])) | {{ $job['location'] }} @endif
-        \hfill {{ $job['startDate'] ?? '' }} -- {{ $job['endDate'] ?? 'Present' }}
+        \subsection*{ {!! $job['position'] ?? 'Unknown Position' !!} }
+        \textit{ {!! $job['employer'] ?? 'Unknown Employer' !!} }
+        @if(!empty($job['location'])) | {!! $job['location'] !!} @endif
+        \hfill {!! $job['startDate'] ?? '' !!} -- {!! $job['endDate'] ?? 'Present' !!}
         
         @if(!empty($job['summary']))
-        \par{{ $job['summary'] }}
+        \par{!! $job['summary'] !!}
         @endif
         
         @if(!empty($job['highlights']) && is_array($job['highlights']))
         \begin{itemize}
             @foreach($job['highlights'] as $highlight)
-                \item {!!  $highlight !!}
+                \item {!! $highlight !!}
             @endforeach
         \end{itemize}
         @endif
+        
+        % ===== LINKED PROJECTS (displayed after work item content) =====
+        @if(!empty($job['crossReferencedProjects']) && is_array($job['crossReferencedProjects']))
+        \par\vspace{0.5em}
+        \noindent\textbf{\color{meta}Related Projects:}
+        \begin{itemize}
+            @foreach($job['crossReferencedProjects'] as $ref)
+                @php
+                    // Look up project by ID or name from the projects array
+                    $project = null;
+                    foreach ($projects ?? [] as $proj) {
+                        if (isset($proj['id']) && $proj['id'] == $ref) {
+                            $project = $proj;
+                            break;
+                        }
+                        if (isset($proj['name']) && $proj['name'] == $ref) {
+                            $project = $proj;
+                            break;
+                        }
+                    }
+                @endphp
+                
+                @if($project)
+                    \item 
+                    \textbf{ {!! $project['name'] ?? $ref !!} }
+                    
+                    @if(!empty($project['summary']))
+                    \par\small{!! $project['summary'] !!}
+                    @endif
+                    
+                @else
+                    \item \textcolor{meta}{[Referenced project not found: {!! $ref !!}]}
+                @endif
+            @endforeach
+        \end{itemize}
+        @endif
+        
         \vspace{1em}
     @endforeach
 @endif
@@ -93,14 +123,14 @@
 @if(!empty($education) && is_array($education))
 \section{Education}
     @foreach($education as $edu)
-        \subsection*{ {{ $edu['studyType'] ?? '' }}{{ !empty($edu['area']) ? ' in ' . $edu['area'] : '' }} }
-        \textit{ {{ $edu['institution'] ?? 'Unknown Institution' }} }
-        \hfill {{ $edu['startDate'] ?? '' }}{{ !empty($edu['endDate']) ? ' -- ' . $edu['endDate'] : '' }}
-        @if(!empty($edu['score']))\par Score/GPA: {{ $edu['score'] }} @endif
+        \subsection*{ {!! $edu['studyType'] ?? '' !!}{!! !empty($edu['area']) ? ' in ' . $edu['area'] : '' !!} }
+        \textit{ {!! $edu['institution'] ?? 'Unknown Institution' !!} }
+        \hfill {!! $edu['startDate'] ?? '' !!}{!! !empty($edu['endDate']) ? ' -- ' . $edu['endDate'] : '' !!}
+        @if(!empty($edu['score']))\par Score/GPA: {!! $edu['score'] !!} @endif
         @if(!empty($edu['courses']) && is_array($edu['courses']))
         \begin{itemize}
             @foreach($edu['courses'] as $course)
-                \item {{ $course }}
+                \item {!! $course !!}
             @endforeach
         \end{itemize}
         @endif
@@ -112,9 +142,9 @@
 @if(!empty($volunteer) && is_array($volunteer))
 \section{Volunteer Experience}
     @foreach($volunteer as $item)
-        \subsection*{ {{ $item['position'] ?? $item['role'] ?? 'Volunteer' }} }
-        \textit{ {{ $item['organization'] ?? '' }} }
-        @if(!empty($item['summary']))\par{{ $item['summary'] }} @endif
+        \subsection*{ {!! $item['position'] ?? $item['role'] ?? 'Volunteer' !!} }
+        \textit{ {!! $item['organization'] ?? '' !!} }
+        @if(!empty($item['summary']))\par{!! $item['summary'] !!} @endif
         \vspace{1em}
     @endforeach
 @endif
@@ -124,10 +154,10 @@
 \section{Certifications}
 \begin{itemize}
     @foreach($certifications as $cert)
-        \item \textbf{ {{ $cert['name'] ?? 'Unnamed' }} }
-        @if(!empty($cert['issuer']))({{ $cert['issuer'] }}) @endif
-        @if(!empty($cert['date']))-- {{ $cert['date'] }} @endif
-        @if(!empty($cert['url']))\par\href{ {{ $cert['url'] }} }{View Certificate} @endif
+        \item \textbf{ {!! $cert['name'] ?? 'Unnamed' !!} }
+        @if(!empty($cert['issuer']))({!! $cert['issuer'] !!}) @endif
+        @if(!empty($cert['date']))-- {!! $cert['date'] !!} @endif
+        @if(!empty($cert['url']))\par\href{ {!! $cert['url'] !!} }{View Certificate} @endif
     @endforeach
 \end{itemize}
 @endif
@@ -137,10 +167,10 @@
 \section{Publications}
 \begin{itemize}
     @foreach($publications as $pub)
-        \item @if(!empty($pub['url']))\href{ {{ $pub['url'] }} }{ {{ $pub['name'] ?? 'Untitled' }} }@else {{ $pub['name'] ?? 'Untitled' }} @endif
-        @if(!empty($pub['publisher']))\textit{ {{ $pub['publisher'] }} } @endif
-        @if(!empty($pub['releaseDate']))({{ $pub['releaseDate'] }}) @endif
-        @if(!empty($pub['summary']))\par{{ $pub['summary'] }} @endif
+        \item @if(!empty($pub['url']))\href{ {!! $pub['url'] !!} }{ {!! $pub['name'] ?? 'Untitled' !!} }@else {!! $pub['name'] ?? 'Untitled' !!} @endif
+        @if(!empty($pub['publisher']))\textit{ {!! $pub['publisher'] !!} }@endif
+        @if(!empty($pub['releaseDate']))({!! $pub['releaseDate'] !!})@endif
+        @if(!empty($pub['summary']))\par{!! $pub['summary'] !!}@endif
     @endforeach
 \end{itemize}
 @endif
@@ -150,10 +180,10 @@
 \section{Awards \& Honors}
 \begin{itemize}
     @foreach($awards as $award)
-        \item \textbf{ {{ $award['title'] ?? 'Unnamed Award' }} }
-        @if(!empty($award['awarder']))-- {{ $award['awarder'] }} @endif
-        @if(!empty($award['date']))({{ $award['date'] }})@endif
-        @if(!empty($award['summary']))\par{{ $award['summary'] }} @endif
+        \item \textbf{ {!! $award['title'] ?? 'Unnamed Award' !!} }
+        @if(!empty($award['awarder']))-- {!! $award['awarder'] !!} @endif
+        @if(!empty($award['date']))({!! $award['date'] !!})@endif
+        @if(!empty($award['summary']))\par{!! $award['summary'] !!} @endif
     @endforeach
 \end{itemize}
 @endif
@@ -163,8 +193,8 @@
 \section{Languages}
 \begin{itemize}
     @foreach($languages as $lang)
-        \item {{ $lang['language'] ?? 'Unknown' }}
-        @if(!empty($lang['fluency']))\textit{({{ $lang['fluency'] }})} @endif
+        \item {!! $lang['language'] ?? 'Unknown' !!}
+        @if(!empty($lang['fluency']))\textit{({!! $lang['fluency'] !!})} @endif
     @endforeach
 \end{itemize}
 @endif
@@ -174,9 +204,9 @@
 \section{Interests}
 \begin{itemize}
     @foreach($interests as $interest)
-        \item \textbf{ {{ $interest['name'] ?? 'Unnamed' }} }
+        \item \textbf{ {!! $interest['name'] ?? 'Unnamed' !!} }
         @if(!empty($interest['keywords']) && is_array($interest['keywords']))
-        : {{ implode(', ', $interest['keywords']) }}
+        : {!! implode(', ', $interest['keywords']) !!}
         @endif
     @endforeach
 \end{itemize}
@@ -187,8 +217,8 @@
 \section{References}
 \begin{itemize}
     @foreach($references as $ref)
-        \item \textbf{ {{ $ref['name'] ?? 'Unnamed' }} }
-        @if(!empty($ref['reference']))\par{{ $ref['reference'] }} @endif
+        \item \textbf{ {!! $ref['name'] ?? 'Unnamed' !!} }
+        @if(!empty($ref['reference']))\par{!! $ref['reference'] !!} @endif
     @endforeach
 \end{itemize}
 @endif
@@ -197,8 +227,8 @@
 @if(!empty($isFiltered) && !empty($filterKeywords))
 \vfill
 \begin{center}
-    \small\color{meta}This resume was filtered by keywords: {{ $filterKeywords }}\end{center}
+    \small\color{meta}This resume was filtered by keywords: {!! $filterKeywords !!}
+\end{center}
 @endif
-
 
 \end{document}
