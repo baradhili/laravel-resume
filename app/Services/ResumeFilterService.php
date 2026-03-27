@@ -40,7 +40,7 @@ class ResumeFilterService
         $filtered['projects'] = $filteredProjects; // Use pre-filtered projects
         $filtered['education'] = self::filterEducation($parsedData['education'] ?? [], $keywordList, $matchAll);
         $filtered['volunteer'] = self::filterVolunteer($parsedData['volunteer'] ?? [], $keywordList, $matchAll);
-        $filtered['certifications'] = self::filterCertifications($parsedData['certifications'] ?? [], $keywordList, $matchAll);
+        $filtered['certificates'] = self::filterCertificates($parsedData['certificates'] ?? [], $keywordList, $matchAll);
         $filtered['publications'] = self::filterPublications($parsedData['publications'] ?? [], $keywordList, $matchAll);
         $filtered['awards'] = self::filterAwards($parsedData['awards'] ?? [], $keywordList, $matchAll);
         $filtered['languages'] = self::filterLanguages($parsedData['languages'] ?? [], $keywordList, $matchAll);
@@ -242,10 +242,29 @@ class ResumeFilterService
         return array_values(array_filter($education, function ($edu) use ($keywords, $matchAll) {
             $fieldsToCheck = [
                 $edu['institution'] ?? '',
-                $edu['studyType'] ?? '',
-                $edu['area'] ?? '',
-                $edu['score'] ?? '',
+                $edu['subInstitution'] ?? '',           // ✅ Schema-compliant
+                $edu['area'] ?? '',                     // ✅ Was 'studyType'
+                $edu['location'] ?? '',
+                $edu['gpa'] ?? '',                      // ✅ Was 'score'
+                $edu['notes'] ?? '',
+                // Programs array (schema: objects with name, concentration, etc.)
+                implode(' ', array_map(
+                    fn($p) => implode(' ', [
+                        $p['name'] ?? '',
+                        $p['designation'] ?? '',
+                        $p['concentration'] ?? '',
+                        $p['type'] ?? '',
+                    ]),
+                    $edu['programs'] ?? []
+                )),
+                // Courses array (schema: string[])
                 implode(' ', $edu['courses'] ?? []),
+                // Awards array (schema: string[])
+                implode(' ', $edu['awards'] ?? []),
+                // Extracurriculars array (schema: string[])
+                implode(' ', $edu['extracurriculars'] ?? []),
+                // Keywords (schema: string[])
+                implode(' ', $edu['keywords'] ?? []),
             ];
 
             foreach ($fieldsToCheck as $field) {
@@ -262,10 +281,11 @@ class ResumeFilterService
     {
         return self::filterGenericItems($items, $keywords, $matchAll, ['organization', 'position', 'summary']);
     }
-    protected static function filterCertifications(array $items, array $keywords, bool $matchAll): array
-    {
-        return self::filterGenericItems($items, $keywords, $matchAll, ['name', 'issuer', 'summary']);
-    }
+    protected static function filterCertificates(array $items, array $keywords, bool $matchAll): array
+{
+    // ✅ certificates schema: 'name', 'issuer', 'summary', 'keywords'
+    return self::filterGenericItems($items, $keywords, $matchAll, ['name', 'issuer', 'summary'], 'keywords');
+}
     protected static function filterPublications(array $items, array $keywords, bool $matchAll): array
     {
         return self::filterGenericItems($items, $keywords, $matchAll, ['name', 'publisher', 'summary']);
@@ -275,17 +295,22 @@ class ResumeFilterService
         return self::filterGenericItems($items, $keywords, $matchAll, ['title', 'awarder', 'summary']);
     }
     protected static function filterLanguages(array $items, array $keywords, bool $matchAll): array
-    {
-        return self::filterGenericItems($items, $keywords, $matchAll, ['language', 'fluency']);
-    }
+{
+    // ✅ languages schema: only 'language' and 'fluency' fields
+    return self::filterGenericItems($items, $keywords, $matchAll, ['language', 'fluency']);
+    // Removed 'keywords' parameter - doesn't exist in schema
+}
     protected static function filterInterests(array $items, array $keywords, bool $matchAll): array
-    {
-        return self::filterGenericItems($items, $keywords, $matchAll, ['name'], 'keywords');
-    }
+{
+    // ✅ interests schema: 'name' + 'keywords' (string[])
+    return self::filterGenericItems($items, $keywords, $matchAll, ['name'], 'keywords');
+}
     protected static function filterReferences(array $items, array $keywords, bool $matchAll): array
-    {
-        return self::filterGenericItems($items, $keywords, $matchAll, ['name', 'reference']);
-    }
+{
+    // ✅ references schema: only 'name' and 'reference' fields
+    return self::filterGenericItems($items, $keywords, $matchAll, ['name', 'reference']);
+    // Removed 'keywords' parameter - doesn't exist in schema
+}
 
     /**
      * Generic filter for sections with similar structure.
