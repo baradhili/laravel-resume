@@ -99,12 +99,12 @@
                 <!-- 🔹 Download Filtered Latex Button 🔹 -->
                 <a href="{{ route('resumes.latex', $resume) }}{{ !empty($filter_keywords) ? '?' . http_build_query(array_filter(['keywords' => $filter_keywords, 'match_all' => $filter_match_all ?? null])) : '' }}"
                     class="download-btn {{ !empty($filter_keywords) ? 'filtered' : '' }}"
-                    title="Download {{ !empty($filter_keywords) ? 'filtered ' : '' }}resume as LaTex">
+                    title="Download {{ !empty($filter_keywords) ? 'filtered ' : '' }}resume as LaTeX">
                     <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    Download LaTex
+                    Download LaTeX
                     @if (!empty($filter_keywords))
                         <span
                             class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-100 text-indigo-700">filtered</span>
