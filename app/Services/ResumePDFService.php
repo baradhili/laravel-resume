@@ -48,16 +48,8 @@ class ResumePDFService
         $baseName = $filenamePrefix ?? preg_replace('/[^a-z0-9]+/i', '-', strtolower($resume->name ?: 'resume'));
         $filename = $baseName . ($keywords ? '-filtered' : '') . '-' . now()->format('Y-m-d') . '.pdf';
 
-        // Define absolute path to fonts (if using custom fonts)
-        $fontPath = storage_path('fonts/');
-
         //define path to latex additional classes and styles
         $latexDir = storage_path('latex/');
-
-        // Ensure font directory exists
-        if (!is_dir($fontPath)) {
-            mkdir($fontPath, 0755, true);
-        }
 
         // Generate PDF using Blade view with hardcoded environment variables
         return (new Latex('latex.resume', $options['metadata'] ?? null))
@@ -67,10 +59,7 @@ class ResumePDFService
                 'HOME' => '/tmp',
                 'PATH' => '/usr/local/bin:/usr/bin:/bin',
                 'TEXMFVAR' => '/tmp/texmfv',
-                'OSFONTDIR' => $fontPath,
                 'TEXINPUTS' => $latexDir . '://:',
-                'FONTCONFIG_PATH' => '/tmp',
-                'XDG_CACHE_HOME' => '/tmp',
             ])
             ->download($filename);
     }
@@ -105,14 +94,8 @@ class ResumePDFService
             mkdir(dirname($fullPath), 0755, true);
         }
 
-        // Define absolute path to fonts
-        $fontPath = storage_path('fonts/');
         //define path to latex additional classes and styles
         $latexDir = storage_path('latex/');
-
-        if (!is_dir($fontPath)) {
-            mkdir($fontPath, 0755, true);
-        }
 
         // Generate and save PDF with hardcoded environment variables
         (new Latex('latex.resume'))
@@ -122,10 +105,7 @@ class ResumePDFService
                 'HOME' => '/tmp',
                 'PATH' => '/usr/local/bin:/usr/bin:/bin',
                 'TEXMFVAR' => '/tmp/texmfv',
-                'OSFONTDIR' => $fontPath . '://:/usr/local/share/fonts//:/usr/share/fonts//',
                 'TEXINPUTS' => $latexDir . '://:',
-                'FONTCONFIG_PATH' => '/tmp',
-                'XDG_CACHE_HOME' => '/tmp',
             ])
             ->savePdf($fullPath);
 
