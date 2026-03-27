@@ -113,6 +113,30 @@ class ResumePDFService
     }
 
     /**
+     * Render raw LaTeX source from prepared template data.
+     *
+     * @param array $data Pre-filtered resume data (with metadata)
+     * @param Resume $resume The resume model
+     * @param Request $request Current request
+     * @param array $options Additional options
+     * @return string Rendered LaTeX source
+     */
+    public static function renderLatexSource(
+        array $data,
+        Resume $resume,
+        Request $request,
+        array $options = []
+    ): string {
+        $includeMetadata = $options['include_metadata'] ?? true;
+
+        // Prepare data for Blade template (escaping, formatting, etc.)
+        $templateData = self::prepareTemplateData($data, $resume, $request, $includeMetadata);
+
+        // Render and return raw LaTeX source
+        return view('latex.resume', $templateData)->render();
+    }
+
+    /**
      * Prepare data for Blade LaTeX template with escaped values.
      */
     protected static function prepareTemplateData(

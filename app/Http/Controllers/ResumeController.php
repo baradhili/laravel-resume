@@ -142,11 +142,6 @@ class ResumeController extends Controller
             $filteredData = $originalData;
             $filterMetadata = null;
         }
-        \Log::info('Filter debug', [
-            'raw_keywords' => $request->query('keywords'),
-            'processed_keywords' => $keywords,
-            'match_all' => $matchAll,
-        ]);
 
         // Pass to view
         return view('resumes.show', [
@@ -287,7 +282,7 @@ class ResumeController extends Controller
     }
 
     /**
-     * Download filtered resume as JSON file.
+     * Download filtered resume as PDF file.
      */
     public function downloadPDF(Resume $resume, Request $request): Response
     {
@@ -339,7 +334,68 @@ class ResumeController extends Controller
         }
     }
 
+        /**
+     * Download filtered resume as raw LaTeX source file.
+     */
+    public function downloadLatex(Resume $resume, Request $request): Response
+    {
+        // === Controller handles: auth, filtering, metadata ===
+        if ($resume->user_id !== Auth::id()) {
+            abort(403);
+        }
 
+        $keywords = $request->query('keywords');
+        $matchAll = $request->boolean('match_all', false);
+        $data = $resume->parsed_data;
+
+        if (!empty($keywords)) {
+            $data = ResumeFilterService::filter($data, $keywords, $matchAll);
+        }
+
+        // Add metadata about the export
+        $data['$exportedAt'] = now()->toIso8601String();
+        $data['$exportedBy'] = Auth::user()->name ?? Auth::user()->email;
+
+        if (!empty($keywords)) {
+            $data['$filter'] = [
+                'keywords' => $keywords,
+                'match_all' => $matchAll,
+                'applied_at' => now()->toIso8601String(),
+            ];
+        }
+
+        // === Service handles: template preparation + rendering ===
+        try {
+            $latexSource = ResumePDFService::renderLatexSource(
+                $data, 
+                $resume, 
+                $request, 
+                ['include_metadata' => true]
+            );
+
+            // === Controller handles: response delivery ===
+            $baseName = preg_replace('/[^a-z0-9]+/i', '-', strtolower($resume->name ?: 'resume'));
+            $filename = $baseName . ($keywords ? '-filtered' : '') . '-' . now()->format('Y-m-d') . '.tex';
+
+            return response()->streamDownload(function () use ($latexSource) {
+                echo $latexSource;
+            }, $filename, [
+                'Content-Type' => 'application/x-tex',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('LaTeX export failed: ' . $e->getMessage(), [
+                'resume_id' => $resume->id,
+                'user_id' => Auth::id(),
+                'error' => $e->getTraceAsString(),
+            ]);
+
+            return back()->withErrors([
+                'latex' => 'Failed to generate LaTeX source: ' . $e->getMessage()
+            ]);
+        }
+    }
 
 }
 

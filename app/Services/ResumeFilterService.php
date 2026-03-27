@@ -26,8 +26,6 @@ class ResumeFilterService
         if (empty($keywordList)) {
             return $parsedData;
         }
-        \Log::info('Normalized keywords', $keywordList);
-
 
         $filtered = $parsedData;
         // check projects first - if project matches filter then work item that crossrefs it is included
