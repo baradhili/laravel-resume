@@ -155,7 +155,7 @@ class ResumePDFService
             'phone' => self::escapeLatex($basics['phone'] ?? ''),
             'location' => self::escapeLatex(self::formatLocation($basics['location'] ?? [])),
             'summary' => self::escapeLatex($basics['summary'] ?? ''),
-            'profiles' => self::formatProfiles($basics['profiles'] ?? []),
+            'links' => self::formatLinks($basics['links'] ?? []),
             'projects' => self::formatProjects($parsedData['projects'] ?? []),
 
             // Sections (filtered, with escaped text)
@@ -163,7 +163,7 @@ class ResumePDFService
             'work' => self::formatWork($parsedData['work'] ?? []),
             'education' => self::formatEducation($parsedData['education'] ?? []),
             'volunteer' => self::formatGenericSection($parsedData['volunteer'] ?? [], ['position', 'role', 'organization', 'summary']),
-            'certifications' => self::formatGenericSection($parsedData['certifications'] ?? [], ['name', 'issuer', 'date', 'url']),
+            'certificates' => self::formatCertificates($parsedData['certificates'] ?? []),
             'publications' => self::formatGenericSection($parsedData['publications'] ?? [], ['name', 'publisher', 'releaseDate', 'url', 'summary']),
             'awards' => self::formatGenericSection($parsedData['awards'] ?? [], ['title', 'awarder', 'date', 'summary']),
             'languages' => self::formatLanguages($parsedData['languages'] ?? []),
@@ -197,17 +197,17 @@ class ResumePDFService
     }
 
     /**
-     * Format profiles with escaped URLs and names.
+     * Format links with escaped URLs and labels.
+     * Matches schema: basics.links[] with url, label
      */
-    protected static function formatProfiles(array $profiles): array
+    protected static function formatLinks(array $links): array
     {
-        return array_map(function ($profile) {
+        return array_map(function ($link) {
             return [
-                'network' => self::escapeLatex($profile['network'] ?? ''),
-                'username' => self::escapeLatex($profile['username'] ?? ''),
-                'url' => self::escapeLatex($profile['url'] ?? ''),
+                'url' => self::escapeLatex($link['url'] ?? ''),
+                'label' => self::escapeLatex($link['label'] ?? ''),
             ];
-        }, $profiles);
+        }, $links);
     }
 
     /**
@@ -263,21 +263,76 @@ class ResumePDFService
     }
 
     /**
-     * Format education with escaped text.
+     * Format education with ALL schema fields escaped for LaTeX.
+     * Matches schema: education[] with programs[], honorSocieties[], etc.
      */
     protected static function formatEducation(array $education): array
     {
         return array_map(function ($edu) {
             return [
-                'studyType' => self::escapeLatex($edu['studyType'] ?? ''),
-                'area' => self::escapeLatex($edu['area'] ?? ''),
+                // Core fields
                 'institution' => self::escapeLatex($edu['institution'] ?? ''),
-                'startDate' => $edu['startDate'] ?? '',
+                'area' => self::escapeLatex($edu['area'] ?? ''),
+                'studyType' => self::escapeLatex($edu['studyType'] ?? ''),
+                'location' => self::escapeLatex($edu['location'] ?? ''),
+                'url' => self::escapeLatex($edu['url'] ?? ''),
+                'subInstitution' => self::escapeLatex($edu['subInstitution'] ?? ''),
+                'subInstitutionUrl' => self::escapeLatex($edu['subInstitutionUrl'] ?? ''),
+                'startDate' => $edu['startDate'] ?? '',  // ISO8601 dates don't need escaping
                 'endDate' => $edu['endDate'] ?? '',
-                'score' => self::escapeLatex($edu['score'] ?? ''),
+                'gpa' => self::escapeLatex($edu['gpa'] ?? ''),
+
+                // Programs array (nested objects)
+                'programs' => array_map(function ($prog) {
+                    return [
+                        'type' => self::escapeLatex($prog['type'] ?? ''),
+                        'designation' => self::escapeLatex($prog['designation'] ?? ''),
+                        'name' => self::escapeLatex($prog['name'] ?? ''),
+                        'concentration' => self::escapeLatex($prog['concentration'] ?? ''),
+                        'minor' => $prog['minor'] ?? false,
+                        'gpa' => self::escapeLatex($prog['gpa'] ?? ''),
+                        'honors' => self::escapeLatex($prog['honors'] ?? ''),
+                    ];
+                }, $edu['programs'] ?? []),
+
+                // Arrays of strings
                 'courses' => array_map(fn($c) => self::escapeLatex($c), $edu['courses'] ?? []),
+                'awards' => array_map(fn($a) => self::escapeLatex($a), $edu['awards'] ?? []),
+                'extracurriculars' => array_map(fn($e) => self::escapeLatex($e), $edu['extracurriculars'] ?? []),
+                'keywords' => array_map(fn($k) => self::escapeLatex($k), $edu['keywords'] ?? []),
+
+                // Honor societies (nested objects)
+                'honorSocieties' => array_map(function ($society) {
+                    return [
+                        'name' => self::escapeLatex($society['name'] ?? ''),
+                        'chapter' => self::escapeLatex($society['chapter'] ?? ''),
+                        'memberId' => self::escapeLatex($society['memberId'] ?? ''),
+                        'inductionDate' => $society['inductionDate'] ?? '',
+                    ];
+                }, $edu['honorSocieties'] ?? []),
+
+                // Free text
+                'notes' => self::escapeLatex($edu['notes'] ?? ''),
             ];
         }, $education);
+    }
+
+    /**
+     * Format certificates with escaped text for LaTeX rendering.
+     * Matches schema: certificates[] with name, date, issuer, url, id, keywords
+     */
+    protected static function formatCertificates(array $certificates): array
+    {
+        return array_map(function ($cert) {
+            return [
+                'name' => self::escapeLatex($cert['name'] ?? ''),
+                'date' => $cert['date'] ?? '',  // Dates don't need escaping (ISO8601)
+                'issuer' => self::escapeLatex($cert['issuer'] ?? ''),
+                'url' => self::escapeLatex($cert['url'] ?? ''),
+                'id' => self::escapeLatex($cert['id'] ?? ''),
+                'keywords' => array_map(fn($k) => self::escapeLatex($k), $cert['keywords'] ?? []),
+            ];
+        }, $certificates);
     }
 
     /**

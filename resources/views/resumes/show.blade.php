@@ -142,7 +142,7 @@
                 </div>
             </div>
 
-            <!-- 🔹 Keyword Filter Form 🔹 -->
+            <!-- Keyword Filter Form 🔹 -->
             @if (!empty($filter_keywords))
                 <div class="mb-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg flex items-center justify-between">
                     <div>
@@ -242,14 +242,14 @@
                             <p class="mt-4 text-gray-700">{{ $basics['summary'] }}</p>
                         @endif
 
-                        <!-- Profiles / Links -->
-                        @if (!empty($basics['profiles']) && is_array($basics['profiles']))
+                        <!-- Links / Profiles -->
+                        @if (!empty($basics['links']) && is_array($basics['links']))
                             <div class="mt-3 flex flex-wrap gap-3">
-                                @foreach ($basics['profiles'] as $profile)
-                                    @if (!empty($profile['url']))
-                                        <a href="{{ $profile['url'] }}" target="_blank"
+                                @foreach ($basics['links'] as $link)
+                                    @if (!empty($link['url']))
+                                        <a href="{!! $link['url'] !!}" target="_blank" rel="noopener noreferrer"
                                             class="text-sm text-indigo-600 hover:underline">
-                                            {{ $profile['network'] ?? ($profile['username'] ?? 'Profile') }}
+                                            {!! $link['label'] ?? $link['url'] !!}
                                         </a>
                                     @endif
                                 @endforeach
@@ -393,7 +393,8 @@
                             <h2 class="resume-section-title">Volunteer Experience</h2>
                             @foreach ($parsed_data['volunteer'] as $item)
                                 <div class="resume-item">
-                                    <div class="resume-item-header">{{ $item['position'] ?? ($item['role'] ?? 'Volunteer') }}
+                                    <div class="resume-item-header">
+                                        {{ $item['position'] ?? ($item['role'] ?? 'Volunteer') }}
                                     </div>
                                     <div class="resume-item-meta">
                                         {{ $item['organization'] ?? '' }}
