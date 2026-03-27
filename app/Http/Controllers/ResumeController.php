@@ -12,7 +12,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\Response;
+use Techsemicolon\Exceptions\LatexException;
 use Techsemicolon\Latex;
 
 class ResumeController extends Controller
@@ -273,7 +274,7 @@ class ResumeController extends Controller
     /**
      * Download filtered resume as JSON file.
      */
-    public function downloadPDF(Resume $resume, Request $request): BinaryFileResponse
+    public function downloadPDF(Resume $resume, Request $request): Response
     {
         // Authorize: user can only download their own resumes
         if ($resume->user_id !== Auth::id()) {
