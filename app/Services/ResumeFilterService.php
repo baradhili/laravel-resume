@@ -26,6 +26,8 @@ class ResumeFilterService
         if (empty($keywordList)) {
             return $parsedData;
         }
+        \Log::info('Normalized keywords', $keywordList);
+
 
         $filtered = $parsedData;
         // check projects first - if project matches filter then work item that crossrefs it is included
@@ -38,7 +40,7 @@ class ResumeFilterService
         $filtered['projects'] = $filteredProjects; // Use pre-filtered projects
         $filtered['education'] = self::filterEducation($parsedData['education'] ?? [], $keywordList, $matchAll);
         $filtered['volunteer'] = self::filterVolunteer($parsedData['volunteer'] ?? [], $keywordList, $matchAll);
-        $filtered['certifications'] = self::filterCertifications($parsedData['certifications'] ?? [], $keywordList, $matchAll);
+        $filtered['certificates'] = self::filterCertificates($parsedData['certificates'] ?? [], $keywordList, $matchAll);
         $filtered['publications'] = self::filterPublications($parsedData['publications'] ?? [], $keywordList, $matchAll);
         $filtered['awards'] = self::filterAwards($parsedData['awards'] ?? [], $keywordList, $matchAll);
         $filtered['languages'] = self::filterLanguages($parsedData['languages'] ?? [], $keywordList, $matchAll);
@@ -56,13 +58,34 @@ class ResumeFilterService
 
     /**
      * Normalize keywords input to array of lowercase trimmed strings.
+     * 
+     * Handles:
+     * - Single string: "resource management" → ["resource management"]
+     * - Comma-separated string: "resource,management" → ["resource", "management"] 
+     * - Array of strings: ["resource management", "workforce planning"] → normalized array
+     * - JSON-encoded string: '["resource management"]' → decoded + normalized array
      */
     protected static function normalizeKeywords(string|array $keywords): array
     {
+        // Handle JSON-encoded string input (e.g., from API request body)
+        if (is_string($keywords) && str_starts_with(trim($keywords), '[')) {
+            $decoded = json_decode($keywords, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $keywords = $decoded;
+            }
+        }
+
+        // Handle comma-separated string input (fallback if controller doesn't split)
+        if (is_string($keywords) && str_contains($keywords, ',')) {
+            $keywords = array_map('trim', explode(',', $keywords));
+        }
+
+        // Ensure we have an array (wrap single string)
         if (is_string($keywords)) {
             $keywords = [$keywords];
         }
 
+        // Normalize: trim whitespace, lowercase, filter empty values
         return array_values(array_filter(array_map(
             fn($k) => Str::of($k)->trim()->lower()->toString(),
             $keywords
@@ -147,14 +170,14 @@ class ResumeFilterService
     protected static function filterWork(array $work, array $keywords, bool $matchAll, array $matchingProjectIds = []): array
     {
         return array_values(array_filter($work, function ($job) use ($keywords, $matchAll, $matchingProjectIds) {
-            // Check if work item matches keywords directly (original behavior)
+            // Check if work item matches keywords directly in schema-defined fields
             $fieldsToCheck = [
-                $job['name'] ?? '',           // Company
-                $job['position'] ?? '',       // Position/title
-                $job['summary'] ?? '',        // Job summary
-                $job['location'] ?? '',       // Location
-                implode(' ', $job['highlights'] ?? []), // Highlights
-                implode(' ', array_column($job['keywords'] ?? [], 'name') ?? []), // Skills/keywords
+                $job['employer'] ?? '',                  // Company name
+                $job['position'] ?? '',                  // Role title
+                $job['summary'] ?? '',                   // Responsibilities overview
+                $job['description'] ?? '',               // Company description
+                $job['location'] ?? '',                  // Job location
+                implode(' ', $job['highlights'] ?? []),  // Key achievements (array of strings)
             ];
 
             foreach ($fieldsToCheck as $field) {
@@ -163,7 +186,16 @@ class ResumeFilterService
                 }
             }
 
-            // 🔹 NEW: Include work item if it references ANY project that matched keywords
+            // Check keywords array (schema: array of strings only)
+            if (!empty($job['keywords']) && is_array($job['keywords'])) {
+                // keywords is strictly string[] per types.json
+                $keywordsText = implode(' ', array_filter($job['keywords'], 'is_string'));
+                if (!empty($keywordsText) && self::matchesKeywords($keywordsText, $keywords, $matchAll)) {
+                    return true;
+                }
+            }
+
+            // 🔹 Include work item if it references ANY project that matched keywords
             if (!empty($job['crossReferencedProjects']) && is_array($job['crossReferencedProjects'])) {
                 foreach ($job['crossReferencedProjects'] as $ref) {
                     if (isset($matchingProjectIds[$ref])) {
@@ -188,7 +220,8 @@ class ResumeFilterService
                 $project['summary'] ?? '',
                 $project['entity'] ?? '',
                 $project['type'] ?? '',
-                implode(' ', $project['keywords'] ?? []),
+
+                implode(' ', array_filter($project['keywords'] ?? [], 'is_string')),
                 implode(' ', $project['highlights'] ?? []),
             ];
 
@@ -209,10 +242,29 @@ class ResumeFilterService
         return array_values(array_filter($education, function ($edu) use ($keywords, $matchAll) {
             $fieldsToCheck = [
                 $edu['institution'] ?? '',
-                $edu['studyType'] ?? '',
-                $edu['area'] ?? '',
-                $edu['score'] ?? '',
+                $edu['subInstitution'] ?? '',           // ✅ Schema-compliant
+                $edu['area'] ?? '',                     // ✅ Was 'studyType'
+                $edu['location'] ?? '',
+                $edu['gpa'] ?? '',                      // ✅ Was 'score'
+                $edu['notes'] ?? '',
+                // Programs array (schema: objects with name, concentration, etc.)
+                implode(' ', array_map(
+                    fn($p) => implode(' ', [
+                        $p['name'] ?? '',
+                        $p['designation'] ?? '',
+                        $p['concentration'] ?? '',
+                        $p['type'] ?? '',
+                    ]),
+                    $edu['programs'] ?? []
+                )),
+                // Courses array (schema: string[])
                 implode(' ', $edu['courses'] ?? []),
+                // Awards array (schema: string[])
+                implode(' ', $edu['awards'] ?? []),
+                // Extracurriculars array (schema: string[])
+                implode(' ', $edu['extracurriculars'] ?? []),
+                // Keywords (schema: string[])
+                implode(' ', $edu['keywords'] ?? []),
             ];
 
             foreach ($fieldsToCheck as $field) {
@@ -229,10 +281,11 @@ class ResumeFilterService
     {
         return self::filterGenericItems($items, $keywords, $matchAll, ['organization', 'position', 'summary']);
     }
-    protected static function filterCertifications(array $items, array $keywords, bool $matchAll): array
-    {
-        return self::filterGenericItems($items, $keywords, $matchAll, ['name', 'issuer', 'summary']);
-    }
+    protected static function filterCertificates(array $items, array $keywords, bool $matchAll): array
+{
+    // ✅ certificates schema: 'name', 'issuer', 'summary', 'keywords'
+    return self::filterGenericItems($items, $keywords, $matchAll, ['name', 'issuer', 'summary'], 'keywords');
+}
     protected static function filterPublications(array $items, array $keywords, bool $matchAll): array
     {
         return self::filterGenericItems($items, $keywords, $matchAll, ['name', 'publisher', 'summary']);
@@ -242,17 +295,22 @@ class ResumeFilterService
         return self::filterGenericItems($items, $keywords, $matchAll, ['title', 'awarder', 'summary']);
     }
     protected static function filterLanguages(array $items, array $keywords, bool $matchAll): array
-    {
-        return self::filterGenericItems($items, $keywords, $matchAll, ['language', 'fluency']);
-    }
+{
+    // ✅ languages schema: only 'language' and 'fluency' fields
+    return self::filterGenericItems($items, $keywords, $matchAll, ['language', 'fluency']);
+    // Removed 'keywords' parameter - doesn't exist in schema
+}
     protected static function filterInterests(array $items, array $keywords, bool $matchAll): array
-    {
-        return self::filterGenericItems($items, $keywords, $matchAll, ['name'], 'keywords');
-    }
+{
+    // ✅ interests schema: 'name' + 'keywords' (string[])
+    return self::filterGenericItems($items, $keywords, $matchAll, ['name'], 'keywords');
+}
     protected static function filterReferences(array $items, array $keywords, bool $matchAll): array
-    {
-        return self::filterGenericItems($items, $keywords, $matchAll, ['name', 'reference']);
-    }
+{
+    // ✅ references schema: only 'name' and 'reference' fields
+    return self::filterGenericItems($items, $keywords, $matchAll, ['name', 'reference']);
+    // Removed 'keywords' parameter - doesn't exist in schema
+}
 
     /**
      * Generic filter for sections with similar structure.
