@@ -124,12 +124,11 @@ class ResumeController extends Controller
         $matchAll = $request->boolean('match_all', false); // ?match_all=true for AND logic
 
         //we split by comma in teh keyword input
-        if (is_string($keywords) && str_contains($keywords, ',')) {
+        if ($keywords === null) {
+            $keywords = [];
+        } elseif (is_string($keywords) && str_contains($keywords, ',')) {
             $keywords = array_map('trim', explode(',', $keywords));
-        }
-
-        // Ensure we have a clean array (handles empty strings, etc.)
-        if (is_string($keywords)) {
+        } elseif (is_string($keywords)) {
             $keywords = [trim($keywords)];
         }
         $keywords = array_filter($keywords, fn($k) => !empty($k));
@@ -340,7 +339,7 @@ class ResumeController extends Controller
         }
     }
 
-    
+
 
 }
 
