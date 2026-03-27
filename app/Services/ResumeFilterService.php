@@ -21,18 +21,21 @@ class ResumeFilterService
     ): array {
         // Normalize keywords to array of lowercase trimmed strings
         $keywordList = self::normalizeKeywords($keywords);
-        
+
         // If no keywords, return original data unchanged
         if (empty($keywordList)) {
             return $parsedData;
         }
 
         $filtered = $parsedData;
+        // check projects first - if project matches filter then work item that crossrefs it is included
+        $filteredProjects = self::filterProjects($parsedData['projects'] ?? [], $keywordList, $matchAll);
+        $matchingProjectIds = self::extractProjectIdentifiers($filteredProjects);
 
         // Filter each section
         $filtered['skills'] = self::filterSkills($parsedData['skills'] ?? [], $keywordList, $matchAll);
-        $filtered['work'] = self::filterWork($parsedData['work'] ?? [], $keywordList, $matchAll);
-        $filtered['projects'] = self::filterProjects($parsedData['projects'] ?? [], $keywordList, $matchAll);
+        $filtered['work'] = self::filterWork($parsedData['work'] ?? [], $keywordList, $matchAll, $matchingProjectIds);
+        $filtered['projects'] = $filteredProjects; // Use pre-filtered projects
         $filtered['education'] = self::filterEducation($parsedData['education'] ?? [], $keywordList, $matchAll);
         $filtered['volunteer'] = self::filterVolunteer($parsedData['volunteer'] ?? [], $keywordList, $matchAll);
         $filtered['certifications'] = self::filterCertifications($parsedData['certifications'] ?? [], $keywordList, $matchAll);
@@ -42,7 +45,7 @@ class ResumeFilterService
         $filtered['interests'] = self::filterInterests($parsedData['interests'] ?? [], $keywordList, $matchAll);
         $filtered['references'] = self::filterReferences($parsedData['references'] ?? [], $keywordList, $matchAll);
 
-        // 🔹 CRITICAL: Update cross-referenced projects in work to only include filtered projects
+        // Update cross-referenced projects in work to only include filtered projects
         $filtered = self::syncCrossReferences($filtered);
 
         // Remove empty sections (optional - keeps output clean)
@@ -59,7 +62,7 @@ class ResumeFilterService
         if (is_string($keywords)) {
             $keywords = [$keywords];
         }
-        
+
         return array_values(array_filter(array_map(
             fn($k) => Str::of($k)->trim()->lower()->toString(),
             $keywords
@@ -72,7 +75,7 @@ class ResumeFilterService
     protected static function matchesKeywords(string $text, array $keywords, bool $matchAll): bool
     {
         $textLower = Str::lower($text);
-        
+
         if ($matchAll) {
             // Must contain ALL keywords
             foreach ($keywords as $keyword) {
@@ -90,6 +93,23 @@ class ResumeFilterService
             }
             return false;
         }
+    }
+
+    /**
+     * Extract identifiers (id and/or name) from filtered projects for cross-reference lookups.
+     */
+    protected static function extractProjectIdentifiers(array $projects): array
+    {
+        $identifiers = [];
+        foreach ($projects as $project) {
+            if (!empty($project['id'])) {
+                $identifiers[$project['id']] = true;
+            }
+            if (!empty($project['name'])) {
+                $identifiers[$project['name']] = true;
+            }
+        }
+        return $identifiers;
     }
 
     /**
@@ -120,10 +140,14 @@ class ResumeFilterService
 
     /**
      * Filter work experience section.
+     * 
+     * Includes work items that reference any project matching the keywords,
+     * even if the work item itself doesn't match keywords directly.
      */
-    protected static function filterWork(array $work, array $keywords, bool $matchAll): array
+    protected static function filterWork(array $work, array $keywords, bool $matchAll, array $matchingProjectIds = []): array
     {
-        return array_values(array_filter($work, function ($job) use ($keywords, $matchAll) {
+        return array_values(array_filter($work, function ($job) use ($keywords, $matchAll, $matchingProjectIds) {
+            // Check if work item matches keywords directly (original behavior)
             $fieldsToCheck = [
                 $job['name'] ?? '',           // Company
                 $job['position'] ?? '',       // Position/title
@@ -132,12 +156,22 @@ class ResumeFilterService
                 implode(' ', $job['highlights'] ?? []), // Highlights
                 implode(' ', array_column($job['keywords'] ?? [], 'name') ?? []), // Skills/keywords
             ];
-            
+
             foreach ($fieldsToCheck as $field) {
                 if (!empty($field) && self::matchesKeywords($field, $keywords, $matchAll)) {
                     return true;
                 }
             }
+
+            // 🔹 NEW: Include work item if it references ANY project that matched keywords
+            if (!empty($job['crossReferencedProjects']) && is_array($job['crossReferencedProjects'])) {
+                foreach ($job['crossReferencedProjects'] as $ref) {
+                    if (isset($matchingProjectIds[$ref])) {
+                        return true;
+                    }
+                }
+            }
+
             return false;
         }));
     }
@@ -157,7 +191,7 @@ class ResumeFilterService
                 implode(' ', $project['keywords'] ?? []),
                 implode(' ', $project['highlights'] ?? []),
             ];
-            
+
             foreach ($fieldsToCheck as $field) {
                 if (!empty($field) && self::matchesKeywords($field, $keywords, $matchAll)) {
                     return true;
@@ -180,7 +214,7 @@ class ResumeFilterService
                 $edu['score'] ?? '',
                 implode(' ', $edu['courses'] ?? []),
             ];
-            
+
             foreach ($fieldsToCheck as $field) {
                 if (!empty($field) && self::matchesKeywords($field, $keywords, $matchAll)) {
                     return true;
@@ -191,25 +225,32 @@ class ResumeFilterService
     }
 
     // Generic filter methods for other sections (can be expanded as needed)
-    protected static function filterVolunteer(array $items, array $keywords, bool $matchAll): array {
+    protected static function filterVolunteer(array $items, array $keywords, bool $matchAll): array
+    {
         return self::filterGenericItems($items, $keywords, $matchAll, ['organization', 'position', 'summary']);
     }
-    protected static function filterCertifications(array $items, array $keywords, bool $matchAll): array {
+    protected static function filterCertifications(array $items, array $keywords, bool $matchAll): array
+    {
         return self::filterGenericItems($items, $keywords, $matchAll, ['name', 'issuer', 'summary']);
     }
-    protected static function filterPublications(array $items, array $keywords, bool $matchAll): array {
+    protected static function filterPublications(array $items, array $keywords, bool $matchAll): array
+    {
         return self::filterGenericItems($items, $keywords, $matchAll, ['name', 'publisher', 'summary']);
     }
-    protected static function filterAwards(array $items, array $keywords, bool $matchAll): array {
+    protected static function filterAwards(array $items, array $keywords, bool $matchAll): array
+    {
         return self::filterGenericItems($items, $keywords, $matchAll, ['title', 'awarder', 'summary']);
     }
-    protected static function filterLanguages(array $items, array $keywords, bool $matchAll): array {
+    protected static function filterLanguages(array $items, array $keywords, bool $matchAll): array
+    {
         return self::filterGenericItems($items, $keywords, $matchAll, ['language', 'fluency']);
     }
-    protected static function filterInterests(array $items, array $keywords, bool $matchAll): array {
+    protected static function filterInterests(array $items, array $keywords, bool $matchAll): array
+    {
         return self::filterGenericItems($items, $keywords, $matchAll, ['name'], 'keywords');
     }
-    protected static function filterReferences(array $items, array $keywords, bool $matchAll): array {
+    protected static function filterReferences(array $items, array $keywords, bool $matchAll): array
+    {
         return self::filterGenericItems($items, $keywords, $matchAll, ['name', 'reference']);
     }
 
@@ -279,16 +320,26 @@ class ResumeFilterService
      */
     protected static function removeEmptySections(array $data): array
     {
-        $sections = ['skills', 'work', 'projects', 'education', 'volunteer', 
-                    'certifications', 'publications', 'awards', 'languages', 
-                    'interests', 'references'];
-        
+        $sections = [
+            'skills',
+            'work',
+            'projects',
+            'education',
+            'volunteer',
+            'certifications',
+            'publications',
+            'awards',
+            'languages',
+            'interests',
+            'references'
+        ];
+
         foreach ($sections as $section) {
             if (isset($data[$section]) && is_array($data[$section]) && empty($data[$section])) {
                 unset($data[$section]);
             }
         }
-        
+
         return $data;
     }
 
