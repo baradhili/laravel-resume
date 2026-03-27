@@ -26,6 +26,8 @@ class ResumeFilterService
         if (empty($keywordList)) {
             return $parsedData;
         }
+        \Log::info('Normalized keywords', $keywordList);
+
 
         $filtered = $parsedData;
         // check projects first - if project matches filter then work item that crossrefs it is included
@@ -56,13 +58,34 @@ class ResumeFilterService
 
     /**
      * Normalize keywords input to array of lowercase trimmed strings.
+     * 
+     * Handles:
+     * - Single string: "resource management" → ["resource management"]
+     * - Comma-separated string: "resource,management" → ["resource", "management"] 
+     * - Array of strings: ["resource management", "workforce planning"] → normalized array
+     * - JSON-encoded string: '["resource management"]' → decoded + normalized array
      */
     protected static function normalizeKeywords(string|array $keywords): array
     {
+        // Handle JSON-encoded string input (e.g., from API request body)
+        if (is_string($keywords) && str_starts_with(trim($keywords), '[')) {
+            $decoded = json_decode($keywords, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $keywords = $decoded;
+            }
+        }
+
+        // Handle comma-separated string input (fallback if controller doesn't split)
+        if (is_string($keywords) && str_contains($keywords, ',')) {
+            $keywords = array_map('trim', explode(',', $keywords));
+        }
+
+        // Ensure we have an array (wrap single string)
         if (is_string($keywords)) {
             $keywords = [$keywords];
         }
 
+        // Normalize: trim whitespace, lowercase, filter empty values
         return array_values(array_filter(array_map(
             fn($k) => Str::of($k)->trim()->lower()->toString(),
             $keywords
@@ -147,14 +170,14 @@ class ResumeFilterService
     protected static function filterWork(array $work, array $keywords, bool $matchAll, array $matchingProjectIds = []): array
     {
         return array_values(array_filter($work, function ($job) use ($keywords, $matchAll, $matchingProjectIds) {
-            // Check if work item matches keywords directly (original behavior)
+            // Check if work item matches keywords directly in schema-defined fields
             $fieldsToCheck = [
-                $job['name'] ?? '',           // Company
-                $job['position'] ?? '',       // Position/title
-                $job['summary'] ?? '',        // Job summary
-                $job['location'] ?? '',       // Location
-                implode(' ', $job['highlights'] ?? []), // Highlights
-                implode(' ', array_column($job['keywords'] ?? [], 'name') ?? []), // Skills/keywords
+                $job['employer'] ?? '',                  // Company name
+                $job['position'] ?? '',                  // Role title
+                $job['summary'] ?? '',                   // Responsibilities overview
+                $job['description'] ?? '',               // Company description
+                $job['location'] ?? '',                  // Job location
+                implode(' ', $job['highlights'] ?? []),  // Key achievements (array of strings)
             ];
 
             foreach ($fieldsToCheck as $field) {
@@ -163,7 +186,16 @@ class ResumeFilterService
                 }
             }
 
-            // 🔹 NEW: Include work item if it references ANY project that matched keywords
+            // Check keywords array (schema: array of strings only)
+            if (!empty($job['keywords']) && is_array($job['keywords'])) {
+                // keywords is strictly string[] per types.json
+                $keywordsText = implode(' ', array_filter($job['keywords'], 'is_string'));
+                if (!empty($keywordsText) && self::matchesKeywords($keywordsText, $keywords, $matchAll)) {
+                    return true;
+                }
+            }
+
+            // 🔹 Include work item if it references ANY project that matched keywords
             if (!empty($job['crossReferencedProjects']) && is_array($job['crossReferencedProjects'])) {
                 foreach ($job['crossReferencedProjects'] as $ref) {
                     if (isset($matchingProjectIds[$ref])) {
@@ -188,7 +220,8 @@ class ResumeFilterService
                 $project['summary'] ?? '',
                 $project['entity'] ?? '',
                 $project['type'] ?? '',
-                implode(' ', $project['keywords'] ?? []),
+
+                implode(' ', array_filter($project['keywords'] ?? [], 'is_string')),
                 implode(' ', $project['highlights'] ?? []),
             ];
 

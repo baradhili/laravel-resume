@@ -123,6 +123,17 @@ class ResumeController extends Controller
         $keywords = $request->query('keywords'); // ?keywords=php,laravel or ?keywords[]=php&keywords[]=laravel
         $matchAll = $request->boolean('match_all', false); // ?match_all=true for AND logic
 
+        //we split by comma in teh keyword input
+        if (is_string($keywords) && str_contains($keywords, ',')) {
+            $keywords = array_map('trim', explode(',', $keywords));
+        }
+
+        // Ensure we have a clean array (handles empty strings, etc.)
+        if (is_string($keywords)) {
+            $keywords = [trim($keywords)];
+        }
+        $keywords = array_filter($keywords, fn($k) => !empty($k));
+
         $originalData = $resume->parsed_data;
 
         if (!empty($keywords)) {
@@ -132,6 +143,11 @@ class ResumeController extends Controller
             $filteredData = $originalData;
             $filterMetadata = null;
         }
+        \Log::info('Filter debug', [
+            'raw_keywords' => $request->query('keywords'),
+            'processed_keywords' => $keywords,
+            'match_all' => $matchAll,
+        ]);
 
         // Pass to view
         return view('resumes.show', [
@@ -324,18 +340,7 @@ class ResumeController extends Controller
         }
     }
 
-    // Define the absolute path to your fonts
-    // $fontPath = storage_path('fonts/');
-    // return (new Latex('latex.resume'))
-    //     ->with($templateData)
-    //     ->binPath('/usr/bin/lualatex')
-    //     ->env([
-    //         'HOME' => '/tmp',
-    //         'PATH' => '/usr/local/bin:/usr/bin:/bin',
-    //         'TEXMFVAR' => '/tmp/texmfv',
-    //         'OSFONTDIR' => $fontPath,
-    //     ])
-    //     ->download($filename);
+    
 
 }
 
