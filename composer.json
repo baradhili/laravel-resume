@@ -20,7 +20,7 @@
         "laravel/fortify": "^1.36",
         "laravel/framework": "^13.0",
         "laravel/tinker": "^3.0",
-        "techsemicolon/laravel-php-latex": "dev-master"
+        "techsemicolon/laravel-php-latex": "dev-master@dev"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -92,6 +92,6 @@
             "php-http/discovery": true
         }
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true
 }
