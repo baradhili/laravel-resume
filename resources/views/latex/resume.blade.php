@@ -35,11 +35,12 @@
     {\Huge\bfseries {!! $name ?? 'No Name' !!}}\\[0.5em]
     \small\color{meta}
     @if(!empty($email))\href{mailto:{!! $email !!}}{ {!! $email !!}}\quad @endif
-    @if(!empty($mobile)){!! $mobile !!}\quad @endif
+    @if(!empty($phone)){!! $phone !!}\quad @endif
     @if(!empty($location)){!! $location !!} @endif
     \par
-    @if(!empty($position))\textbf{Position:} {!! $position !!}\par @endif
-    @if(!empty($quote))\textit{``{!! $quote !!}''}\par @endif
+    @if(!empty($label))\textit{``{!! $label !!}''}\par @endif
+    \par
+    % we need to add links here later
 \end{center}
 
 % ===== SUMMARY =====
