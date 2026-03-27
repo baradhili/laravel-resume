@@ -25,6 +25,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/resumes/{resume}', [ResumeController::class, 'destroy'])->name('resumes.destroy');
     Route::get('/resumes/{resume}/download/json', [ResumeController::class, 'downloadJSON']) ->name('resumes.json');
     Route::get('/resumes/{resume}/download/pdf', [ResumeController::class, 'downloadPDF']) ->name('resumes.pdf');
+    Route::get('/resumes/{resume}/download/latex', [ResumeController::class, 'downloadLatex']) ->name('resumes.latex');
 
 });
 
