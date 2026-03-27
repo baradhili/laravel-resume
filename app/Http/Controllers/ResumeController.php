@@ -123,6 +123,16 @@ class ResumeController extends Controller
         $keywords = $request->query('keywords'); // ?keywords=php,laravel or ?keywords[]=php&keywords[]=laravel
         $matchAll = $request->boolean('match_all', false); // ?match_all=true for AND logic
 
+        //we split by comma in teh keyword input
+        if ($keywords === null) {
+            $keywords = [];
+        } elseif (is_string($keywords) && str_contains($keywords, ',')) {
+            $keywords = array_map('trim', explode(',', $keywords));
+        } elseif (is_string($keywords)) {
+            $keywords = [trim($keywords)];
+        }
+        $keywords = array_filter($keywords, fn($k) => !empty($k));
+
         $originalData = $resume->parsed_data;
 
         if (!empty($keywords)) {
